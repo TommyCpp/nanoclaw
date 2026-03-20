@@ -25,6 +25,7 @@ final class WebSocketService: ObservableObject {
     private var currentStreamingMessageID: UUID?
     private var reconnectAttempts = 0
     private let maxReconnectAttempts = 5
+    private var connectionGeneration = 0
 
 
     init() {
@@ -33,6 +34,8 @@ final class WebSocketService: ObservableObject {
 
     func connect() {
         guard connectionState != .connecting && connectionState != .authenticating else { return }
+
+        connectionGeneration += 1
 
         let config = ConnectionConfig()
         guard let url = config.webSocketURL else {
@@ -51,7 +54,7 @@ final class WebSocketService: ObservableObject {
         webSocketTask = task
         task.resume()
 
-        authenticate(token: token)
+        authenticate(token: token, generation: connectionGeneration)
     }
 
 
@@ -195,7 +198,7 @@ final class WebSocketService: ObservableObject {
 
     // MARK: - Private
 
-    private func authenticate(token: String) {
+    private func authenticate(token: String, generation: Int) {
         connectionState = .authenticating
 
         let payload: [String: String] = ["auth": token]
@@ -213,13 +216,13 @@ final class WebSocketService: ObservableObject {
             }
         }
 
-        receiveMessages()
+        receiveMessages(generation: generation)
     }
 
-    private func receiveMessages() {
+    private func receiveMessages(generation: Int) {
         webSocketTask?.receive { [weak self] result in
             Task { @MainActor in
-                guard let self else { return }
+                guard let self, self.connectionGeneration == generation else { return }
 
                 switch result {
                 case .success(let message):
@@ -234,7 +237,7 @@ final class WebSocketService: ObservableObject {
                         break
                     }
                     // Continue listening
-                    self.receiveMessages()
+                    self.receiveMessages(generation: generation)
 
                 case .failure(let error):
                     if self.connectionState.isConnected || self.connectionState == .authenticating {
