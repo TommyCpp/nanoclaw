@@ -10,7 +10,12 @@ import { setRegisteredGroup } from '../db.js';
 import { readEnvFile } from '../env.js';
 import { logger } from '../logger.js';
 import { registerChannel, ChannelOpts } from './registry.js';
-import { Channel, OnChatMetadata, OnInboundMessage, RegisteredGroup } from '../types.js';
+import {
+  Channel,
+  OnChatMetadata,
+  OnInboundMessage,
+  RegisteredGroup,
+} from '../types.js';
 
 /** Single persistent group — all iOS conversations share one history + memory */
 const IOS_JID = 'ios:main';
@@ -30,6 +35,8 @@ export class IosChannel implements Channel {
   private opts: IosChannelOpts;
   private wss: WebSocketServer | null = null;
   private clients = new Set<WebSocket>();
+  /** Messages buffered while no client is connected */
+  private pendingMessages: string[] = [];
   private connected = false;
 
   constructor(opts: IosChannelOpts) {
@@ -77,7 +84,10 @@ export class IosChannel implements Channel {
             authenticated = true;
             this.clients.add(ws);
             ws.send(JSON.stringify({ type: 'auth_ok' }));
-            logger.info({ ip: (req.socket as any).remoteAddress }, 'iOS client connected');
+            logger.info(
+              { ip: (req.socket as any).remoteAddress },
+              'iOS client connected',
+            );
           } else {
             ws.send(JSON.stringify({ type: 'error', message: 'unauthorized' }));
             ws.close();
@@ -102,7 +112,13 @@ export class IosChannel implements Channel {
           ? content
           : `@${ASSISTANT_NAME} ${content}`;
 
-        this.opts.onChatMetadata(IOS_JID, new Date().toISOString(), 'NanoClaw iOS', 'ios', false);
+        this.opts.onChatMetadata(
+          IOS_JID,
+          new Date().toISOString(),
+          'NanoClaw iOS',
+          'ios',
+          false,
+        );
         this.opts.onMessage(IOS_JID, {
           id: msgId,
           chat_jid: IOS_JID,
@@ -131,8 +147,13 @@ export class IosChannel implements Channel {
       server.listen(this.opts.port, '0.0.0.0', () => {
         this.connected = true;
         const scheme = useTls ? 'wss' : 'ws';
-        logger.info({ port: this.opts.port, tls: useTls }, 'iOS WebSocket channel listening');
-        console.log(`\n  iOS channel: ${scheme}://localhost:${this.opts.port}${useTls ? ' (TLS)' : ''}\n`);
+        logger.info(
+          { port: this.opts.port, tls: useTls },
+          'iOS WebSocket channel listening',
+        );
+        console.log(
+          `\n  iOS channel: ${scheme}://localhost:${this.opts.port}${useTls ? ' (TLS)' : ''}\n`,
+        );
         resolve();
       });
     });
@@ -147,7 +168,10 @@ export class IosChannel implements Channel {
         ws.send(done);
       }
     }
-    logger.info({ clients: this.clients.size, length: text.length }, 'iOS: message sent');
+    logger.info(
+      { clients: this.clients.size, length: text.length },
+      'iOS: message sent',
+    );
   }
 
   async setTyping(_jid: string, isTyping: boolean): Promise<void> {
