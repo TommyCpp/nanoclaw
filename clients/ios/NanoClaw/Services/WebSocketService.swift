@@ -66,6 +66,22 @@ final class WebSocketService: ObservableObject {
         }
     }
 
+
+    /// Force disconnect and reconnect — used when returning from background
+    /// where the socket may be silently dead.
+    func reconnect() {
+        stopPingTimer()
+        webSocketTask?.cancel(with: .normalClosure, reason: nil)
+        webSocketTask = nil
+        session?.invalidateAndCancel()
+        session = nil
+        connectionState = .disconnected
+        isStreaming = false
+        currentStreamingMessageID = nil
+        reconnectAttempts = 0
+        connect()
+    }
+
     func disconnect() {
         stopPingTimer()
         webSocketTask?.cancel(with: .normalClosure, reason: nil)

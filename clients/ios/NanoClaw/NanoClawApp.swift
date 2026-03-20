@@ -13,7 +13,7 @@ struct NanoClawApp: App {
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
-                webSocketService.connectIfNeeded()
+                webSocketService.reconnect()
             }
         }
     }
