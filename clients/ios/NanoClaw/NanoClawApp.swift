@@ -11,8 +11,8 @@ struct NanoClawApp: App {
                 .environmentObject(webSocketService)
                 .preferredColorScheme(.dark)
         }
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active {
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            if newPhase == .active && oldPhase == .background {
                 webSocketService.reconnect()
             }
         }
