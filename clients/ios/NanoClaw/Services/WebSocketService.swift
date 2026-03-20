@@ -26,6 +26,11 @@ final class WebSocketService: ObservableObject {
     private var reconnectAttempts = 0
     private let maxReconnectAttempts = 5
 
+
+    init() {
+        loadMessages()
+    }
+
     func connect() {
         guard connectionState != .connecting && connectionState != .authenticating else { return }
 
@@ -78,6 +83,7 @@ final class WebSocketService: ObservableObject {
 
         let userMessage = Message(role: .user, text: text)
         messages.append(userMessage)
+        saveMessages()
 
         let payload: [String: String] = ["type": "message", "text": text]
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
@@ -151,6 +157,26 @@ final class WebSocketService: ObservableObject {
         }
     }
 
+
+    // MARK: - Persistence
+
+    private static var messagesFileURL: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("messages.json")
+    }
+
+    private func loadMessages() {
+        guard let data = try? Data(contentsOf: Self.messagesFileURL),
+              let saved = try? JSONDecoder().decode([Message].self, from: data)
+        else { return }
+        messages = saved
+    }
+
+    private func saveMessages() {
+        guard let data = try? JSONEncoder().encode(messages) else { return }
+        try? data.write(to: Self.messagesFileURL, options: .atomic)
+    }
+
     // MARK: - Private
 
     private func authenticate(token: String) {
@@ -221,6 +247,7 @@ final class WebSocketService: ObservableObject {
         case "done":
             isStreaming = false
             currentStreamingMessageID = nil
+            saveMessages()
 
         case "error":
             let errorMsg = json["message"] as? String ?? "Unknown error"
@@ -246,6 +273,7 @@ final class WebSocketService: ObservableObject {
             currentStreamingMessageID = newMessage.id
             messages.append(newMessage)
         }
+        saveMessages()
     }
 
     private func handleDisconnect(error: Error) {

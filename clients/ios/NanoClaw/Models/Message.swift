@@ -1,12 +1,12 @@
 import Foundation
 
-struct Message: Identifiable, Equatable {
+struct Message: Identifiable, Equatable, Codable {
     let id: UUID
     let role: Role
     var text: String
     let timestamp: Date
 
-    enum Role: Equatable {
+    enum Role: String, Equatable, Codable {
         case user
         case assistant
     }
