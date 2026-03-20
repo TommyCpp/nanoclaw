@@ -11,3 +11,6 @@ import './discord.js';
 // telegram
 
 // whatsapp
+
+// ios
+import './ios.js';
