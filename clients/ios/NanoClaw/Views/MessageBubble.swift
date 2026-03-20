@@ -14,6 +14,13 @@ struct MessageBubble: View {
                 .padding(.vertical, 10)
                 .background(bubbleBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
+                .contextMenu {
+                    Button {
+                        UIPasteboard.general.string = message.text
+                    } label: {
+                        Label("Copy", systemImage: "doc.on.doc")
+                    }
+                }
 
             if !isUser { Spacer(minLength: 60) }
         }
