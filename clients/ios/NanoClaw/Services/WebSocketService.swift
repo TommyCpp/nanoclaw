@@ -258,6 +258,9 @@ final class WebSocketService: ObservableObject {
             connectionState = .connected
             reconnectAttempts = 0
             startPingTimer()
+            if let pending = json["pending"] as? Int, pending > 0 {
+                isStreaming = true // show typing indicator while buffered messages arrive
+            }
 
         case "token":
             guard let tokenText = json["text"] as? String else { return }

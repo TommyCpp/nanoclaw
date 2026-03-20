@@ -83,7 +83,12 @@ export class IosChannel implements Channel {
           if (msg.auth === this.opts.secret) {
             authenticated = true;
             this.clients.add(ws);
-            ws.send(JSON.stringify({ type: 'auth_ok' }));
+            ws.send(
+              JSON.stringify({
+                type: 'auth_ok',
+                pending: this.pendingMessages.length,
+              }),
+            );
             logger.info(
               { ip: (req.socket as any).remoteAddress },
               'iOS client connected',
