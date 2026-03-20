@@ -49,6 +49,18 @@ final class WebSocketService: ObservableObject {
         authenticate(token: token)
     }
 
+
+    /// Reconnect if not already connected or connecting. Resets error state.
+    func connectIfNeeded() {
+        switch connectionState {
+        case .connected, .connecting, .authenticating:
+            return
+        case .disconnected, .error:
+            reconnectAttempts = 0
+            connect()
+        }
+    }
+
     func disconnect() {
         stopPingTimer()
         webSocketTask?.cancel(with: .normalClosure, reason: nil)
