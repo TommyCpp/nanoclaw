@@ -88,6 +88,17 @@ export class IosChannel implements Channel {
               { ip: (req.socket as any).remoteAddress },
               'iOS client connected',
             );
+            // Flush any messages that arrived while client was away
+            if (this.pendingMessages.length > 0) {
+              logger.info(
+                { count: this.pendingMessages.length },
+                'iOS: flushing pending messages',
+              );
+              for (const pending of this.pendingMessages) {
+                ws.send(pending);
+              }
+              this.pendingMessages = [];
+            }
           } else {
             ws.send(JSON.stringify({ type: 'error', message: 'unauthorized' }));
             ws.close();
@@ -162,14 +173,23 @@ export class IosChannel implements Channel {
   async sendMessage(_jid: string, text: string): Promise<void> {
     const token = JSON.stringify({ type: 'token', text });
     const done = JSON.stringify({ type: 'done' });
-    for (const ws of this.clients) {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(token);
-        ws.send(done);
-      }
+    const connected = [...this.clients].filter(
+      (ws) => ws.readyState === WebSocket.OPEN,
+    );
+    if (connected.length === 0) {
+      this.pendingMessages.push(token, done);
+      logger.info(
+        { buffered: this.pendingMessages.length, length: text.length },
+        'iOS: no client connected, buffered message',
+      );
+      return;
+    }
+    for (const ws of connected) {
+      ws.send(token);
+      ws.send(done);
     }
     logger.info(
-      { clients: this.clients.size, length: text.length },
+      { clients: connected.length, length: text.length },
       'iOS: message sent',
     );
   }
