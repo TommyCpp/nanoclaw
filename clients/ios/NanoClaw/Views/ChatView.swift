@@ -12,6 +12,7 @@ struct ChatView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 messageList
+                quickActionBar
                 inputBar
             }
             .background(bgColor)
@@ -85,6 +86,44 @@ struct ChatView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Quick Actions
+
+    private struct QuickAction {
+        let label: String
+        let icon: String
+        let message: String
+    }
+
+    private let quickActions: [QuickAction] = [
+        QuickAction(label: "Scheduled Jobs", icon: "clock", message: "List all scheduled jobs"),
+        QuickAction(label: "Status", icon: "checkmark.circle", message: "What's your current status?"),
+        QuickAction(label: "Help", icon: "questionmark.circle", message: "What can you help me with?"),
+    ]
+
+    private var quickActionBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(quickActions, id: \.label) { action in
+                    Button {
+                        webSocket.send(action.message)
+                    } label: {
+                        Label(action.label, systemImage: action.icon)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(Color(hex: 0x2E2E2E))
+                            .clipShape(Capsule())
+                    }
+                    .disabled(!webSocket.connectionState.isConnected || webSocket.isStreaming)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+        }
+        .background(Color(hex: 0x1A1A1A))
     }
 
     private var inputBar: some View {
