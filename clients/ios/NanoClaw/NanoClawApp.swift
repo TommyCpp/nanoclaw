@@ -14,8 +14,6 @@ struct NanoClawApp: App {
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 webSocketService.connectIfNeeded()
-            } else if newPhase == .background {
-                webSocketService.disconnect()
             }
         }
     }
