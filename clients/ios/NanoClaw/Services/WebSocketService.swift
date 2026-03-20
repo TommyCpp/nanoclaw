@@ -300,17 +300,17 @@ final class WebSocketService: ObservableObject {
         webSocketTask = nil
         isStreaming = false
         currentStreamingMessageID = nil
+        connectionState = .disconnected
 
-        if reconnectAttempts < maxReconnectAttempts {
-            reconnectAttempts += 1
-            let delay = min(pow(2.0, Double(reconnectAttempts)), 30.0)
-            connectionState = .connecting
-            Task {
-                try? await Task.sleep(for: .seconds(delay))
-                self.connect()
-            }
-        } else {
+        guard reconnectAttempts < maxReconnectAttempts else {
             connectionState = .error("Disconnected: \(error.localizedDescription)")
+            return
+        }
+        reconnectAttempts += 1
+        let delay = min(pow(2.0, Double(reconnectAttempts)), 30.0)
+        Task {
+            try? await Task.sleep(for: .seconds(delay))
+            self.connect()
         }
     }
 
