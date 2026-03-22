@@ -4,16 +4,22 @@ struct ChatView: View {
     @EnvironmentObject private var webSocket: WebSocketService
     @State private var inputText = ""
     @State private var showSettings = false
+    @State private var isAtBottom = false
     @FocusState private var inputFocused: Bool
 
     private let bgColor = Color(hex: 0x111111)
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                messageList
-                quickActionBar
-                inputBar
+            ZStack(alignment: .bottom) {
+                VStack(spacing: 0) {
+                    messageList
+                    quickActionBar
+                    inputBar
+                }
+                if !isAtBottom && !webSocket.messages.isEmpty {
+                    scrollToBottomButton
+                }
             }
             .background(bgColor)
             .navigationTitle("NanoClaw")
@@ -66,26 +72,59 @@ struct ChatView: View {
                         TypingIndicator()
                             .id("typing")
                     }
+
+                    Color.clear.frame(height: 1)
+                        .id("bottomAnchor")
+                        .onAppear { withAnimation(.easeInOut(duration: 0.2)) { isAtBottom = true } }
+                        .onDisappear { withAnimation(.easeInOut(duration: 0.2)) { isAtBottom = false } }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
+                .onAppear {
+                    proxy.scrollTo("bottomAnchor", anchor: .bottom)
+                }
             }
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: webSocket.messages.count) {
-                withAnimation(.easeOut(duration: 0.2)) {
-                    if let lastId = webSocket.messages.last?.id {
-                        proxy.scrollTo(lastId, anchor: .bottom)
-                    } else {
-                        proxy.scrollTo("typing", anchor: .bottom)
+                if isAtBottom {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        if let lastId = webSocket.messages.last?.id {
+                            proxy.scrollTo(lastId, anchor: .bottom)
+                        } else {
+                            proxy.scrollTo("typing", anchor: .bottom)
+                        }
                     }
                 }
             }
             .onChange(of: webSocket.messages.last?.text) {
-                withAnimation(.easeOut(duration: 0.1)) {
-                    proxy.scrollTo(webSocket.messages.last?.id, anchor: .bottom)
+                if isAtBottom {
+                    withAnimation(.easeOut(duration: 0.1)) {
+                        proxy.scrollTo(webSocket.messages.last?.id, anchor: .bottom)
+                    }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .scrollToBottom)) { _ in
+                withAnimation(.easeOut(duration: 0.3)) {
+                    proxy.scrollTo("bottomAnchor", anchor: .bottom)
                 }
             }
         }
+    }
+
+    private var scrollToBottomButton: some View {
+        Button {
+            NotificationCenter.default.post(name: .scrollToBottom, object: nil)
+        } label: {
+            Image(systemName: "chevron.down")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 40, height: 40)
+                .background(Color(hex: 0x3a3a3a))
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.4), radius: 6, y: 2)
+        }
+        .padding(.bottom, 120)
+        .transition(.scale(scale: 0.7).combined(with: .opacity))
     }
 
     // MARK: - Quick Actions
@@ -97,9 +136,7 @@ struct ChatView: View {
     }
 
     private let quickActions: [QuickAction] = [
-        QuickAction(label: "Scheduled Jobs", icon: "clock", message: "List all scheduled jobs"),
-        QuickAction(label: "Status", icon: "checkmark.circle", message: "What's your current status?"),
-        QuickAction(label: "Help", icon: "questionmark.circle", message: "What can you help me with?"),
+        QuickAction(label: "What now", icon: "newspaper", message: "用中文告诉我过去一小时内最重要的3条新闻"),
     ]
 
     private var quickActionBar: some View {
@@ -226,5 +263,9 @@ struct ChatView: View {
         inputText = ""
         webSocket.send(text)
     }
+}
+
+private extension Notification.Name {
+    static let scrollToBottom = Notification.Name("scrollToBottom")
 }
 

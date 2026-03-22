@@ -18,6 +18,8 @@ final class WebSocketService: ObservableObject {
     @Published var connectionState: ConnectionState = .disconnected
     @Published var messages: [Message] = []
     @Published var isStreaming = false
+    @Published var tasks: [ScheduledTask] = []
+    @Published var isLoadingTasks = false
 
     private var webSocketTask: URLSessionWebSocketTask?
     private var session: URLSession?
@@ -95,6 +97,15 @@ final class WebSocketService: ObservableObject {
         isStreaming = false
         currentStreamingMessageID = nil
         reconnectAttempts = 0
+    }
+
+    func requestTasks() {
+        guard connectionState.isConnected else { return }
+        isLoadingTasks = true
+        let payload: [String: String] = ["type": "list_tasks"]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload),
+              let jsonString = String(data: data, encoding: .utf8) else { return }
+        webSocketTask?.send(.string(jsonString)) { _ in }
     }
 
     func send(_ text: String) {
@@ -280,6 +291,16 @@ final class WebSocketService: ObservableObject {
 
         case "pong":
             break // heartbeat acknowledged
+
+        case "tasks":
+            isLoadingTasks = false
+            let decoder = JSONDecoder()
+            if let tasksData = text.data(using: .utf8),
+               let envelope = try? JSONSerialization.jsonObject(with: tasksData) as? [String: Any],
+               let tasksArray = envelope["tasks"],
+               let tasksJSON = try? JSONSerialization.data(withJSONObject: tasksArray) {
+                tasks = (try? decoder.decode([ScheduledTask].self, from: tasksJSON)) ?? []
+            }
 
         default:
             break

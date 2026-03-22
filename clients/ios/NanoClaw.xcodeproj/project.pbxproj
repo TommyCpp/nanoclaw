@@ -15,19 +15,23 @@
 		79F08A97C05DA64528E5AB78 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C928DCF80CA7102C52AEAE1 /* ChatView.swift */; };
 		A0A4A622C3B4C18452BB2F16 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E60A2B4EF4CA614E78A0813D /* SettingsView.swift */; };
 		A318DE12C975C01A4528F316 /* WebSocketService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFFD9C86823CDF76EB2C3B82 /* WebSocketService.swift */; };
+		C5F2114553A21D0DEE34AEAE /* JobsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64CA9F547DE9B248F64FAC73 /* JobsView.swift */; };
 		E6A769EB417AC03B018032E5 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50518898414BFABED003EA6C /* KeychainService.swift */; };
 		E921B6D6318AA68FEDC0D3BB /* TypingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9563BE91C94A99280E0DE5 /* TypingIndicator.swift */; };
+		ED9538CFE7F45DFC263BFB34 /* ScheduledTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 281B75B7EA5EECD3F96A46C3 /* ScheduledTask.swift */; };
 		FF9700B27931A2A9814A3AF7 /* ConnectionConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = C099EBD2121E5D6AE5C3ADDB /* ConnectionConfig.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		1C928DCF80CA7102C52AEAE1 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		281B75B7EA5EECD3F96A46C3 /* ScheduledTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledTask.swift; sourceTree = "<group>"; };
 		3500A4142303820A339C585D /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
 		50518898414BFABED003EA6C /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
+		64CA9F547DE9B248F64FAC73 /* JobsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobsView.swift; sourceTree = "<group>"; };
 		82566C52A47F3B8DFBC03B07 /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		99750EF765017DBC11DB297E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9FBA693F8CE1F0FA97953263 /* NanoClawApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NanoClawApp.swift; sourceTree = "<group>"; };
-		AB70806554C2D54311EC7BBF /* NanoClaw.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NanoClaw.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB70806554C2D54311EC7BBF /* NanoClaw.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NanoClaw.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9B8AF286FA3B6691DFF1041 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C099EBD2121E5D6AE5C3ADDB /* ConnectionConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionConfig.swift; sourceTree = "<group>"; };
 		E60A2B4EF4CA614E78A0813D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -60,6 +64,7 @@
 			children = (
 				C099EBD2121E5D6AE5C3ADDB /* ConnectionConfig.swift */,
 				82566C52A47F3B8DFBC03B07 /* Message.swift */,
+				281B75B7EA5EECD3F96A46C3 /* ScheduledTask.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -98,6 +103,7 @@
 			isa = PBXGroup;
 			children = (
 				1C928DCF80CA7102C52AEAE1 /* ChatView.swift */,
+				64CA9F547DE9B248F64FAC73 /* JobsView.swift */,
 				3500A4142303820A339C585D /* MessageBubble.swift */,
 				E60A2B4EF4CA614E78A0813D /* SettingsView.swift */,
 				FE9563BE91C94A99280E0DE5 /* TypingIndicator.swift */,
@@ -138,6 +144,7 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					39EB4E3D25D09ACF59A62C97 = {
+						DevelopmentTeam = 8HU2W469PT;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -182,10 +189,12 @@
 			files = (
 				79F08A97C05DA64528E5AB78 /* ChatView.swift in Sources */,
 				FF9700B27931A2A9814A3AF7 /* ConnectionConfig.swift in Sources */,
+				C5F2114553A21D0DEE34AEAE /* JobsView.swift in Sources */,
 				E6A769EB417AC03B018032E5 /* KeychainService.swift in Sources */,
 				448B36451402D04924DFB9BB /* Message.swift in Sources */,
 				0A7F5934CC17588F2FAEE2F8 /* MessageBubble.swift in Sources */,
 				72687683B1C57E6DB52C1DD4 /* NanoClawApp.swift in Sources */,
+				ED9538CFE7F45DFC263BFB34 /* ScheduledTask.swift in Sources */,
 				A0A4A622C3B4C18452BB2F16 /* SettingsView.swift in Sources */,
 				E921B6D6318AA68FEDC0D3BB /* TypingIndicator.swift in Sources */,
 				A318DE12C975C01A4528F316 /* WebSocketService.swift in Sources */,

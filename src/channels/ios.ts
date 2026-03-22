@@ -6,7 +6,7 @@ import { randomUUID } from 'crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 
 import { ASSISTANT_NAME, TRIGGER_PATTERN } from '../config.js';
-import { setRegisteredGroup } from '../db.js';
+import { setRegisteredGroup, getAllTasks } from '../db.js';
 import { readEnvFile } from '../env.js';
 import { logger } from '../logger.js';
 import { registerChannel, ChannelOpts } from './registry.js';
@@ -114,6 +114,12 @@ export class IosChannel implements Channel {
         // Heartbeat
         if (msg.type === 'ping') {
           ws.send(JSON.stringify({ type: 'pong' }));
+          return;
+        }
+
+        if (msg.type === 'list_tasks') {
+          const tasks = getAllTasks();
+          ws.send(JSON.stringify({ type: 'tasks', tasks }));
           return;
         }
 

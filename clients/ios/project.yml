@@ -23,7 +23,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.nanoclaw.ios
-        DEVELOPMENT_TEAM: GUR74KTQWM
+        DEVELOPMENT_TEAM: 8HU2W469PT
         CODE_SIGN_STYLE: Automatic
         SWIFT_VERSION: "5.9"
         INFOPLIST_FILE: NanoClaw/Info.plist
