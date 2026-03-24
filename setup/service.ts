@@ -255,8 +255,9 @@ WantedBy=${runningAsRoot ? 'multi-user.target' : 'default.target'}`;
   fs.writeFileSync(unitPath, unit);
   logger.info({ unitPath }, 'Wrote systemd unit');
 
-  // Detect stale docker group before starting (user systemd only)
-  const dockerGroupStale = !runningAsRoot && checkDockerGroupStale();
+  // Detect stale docker group before starting (user systemd only, not relevant for podman)
+  const isPodman = process.env.CONTAINER_RUNTIME === 'podman';
+  const dockerGroupStale = !runningAsRoot && !isPodman && checkDockerGroupStale();
   if (dockerGroupStale) {
     logger.warn(
       'Docker group not active in systemd session — user was likely added to docker group mid-session',

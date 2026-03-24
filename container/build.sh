@@ -11,6 +11,7 @@ TAG="${1:-latest}"
 CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
 
 echo "Building NanoClaw agent container image..."
+echo "Runtime: ${CONTAINER_RUNTIME}"
 echo "Image: ${IMAGE_NAME}:${TAG}"
 
 ${CONTAINER_RUNTIME} build -t "${IMAGE_NAME}:${TAG}" .

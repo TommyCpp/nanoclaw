@@ -47,6 +47,12 @@ import { resolveGroupFolderPath } from './group-folder.js';
 import { startIpcWatcher } from './ipc.js';
 import { findChannel, formatMessages, formatOutbound } from './router.js';
 import {
+  listCcSessions,
+  restoreCcSessions,
+  startCcSession,
+  stopCcSession,
+} from './cc-session.js';
+import {
   restoreRemoteControl,
   startRemoteControl,
   stopRemoteControl,
@@ -476,6 +482,7 @@ async function main(): Promise<void> {
   logger.info('Database initialized');
   loadState();
   restoreRemoteControl();
+  restoreCcSessions();
 
   // Start credential proxy (containers route API calls through this)
   const proxyServer = await startCredentialProxy(
@@ -536,6 +543,58 @@ async function main(): Promise<void> {
     }
   }
 
+  // Handle /cc-session, /cc-session-stop, /cc-session-list commands
+  async function handleCcSessionCommand(
+    command: string,
+    chatJid: string,
+    msg: NewMessage,
+  ): Promise<void> {
+    const group = registeredGroups[chatJid];
+    if (!group?.isMain) {
+      logger.warn(
+        { chatJid, sender: msg.sender },
+        'CC session command rejected: not main group',
+      );
+      return;
+    }
+
+    const channel = findChannel(channels, chatJid);
+    if (!channel) return;
+
+    if (command.startsWith('/cc-session-stop ')) {
+      const dir = command.slice('/cc-session-stop '.length).trim();
+      const result = stopCcSession(dir);
+      await channel.sendMessage(
+        chatJid,
+        result.ok ? `CC session stopped for ${dir}` : result.error,
+      );
+    } else if (command === '/cc-session-list') {
+      const active = listCcSessions();
+      if (active.length === 0) {
+        await channel.sendMessage(chatJid, 'No active CC sessions.');
+      } else {
+        const lines = active.map(
+          (s) => `• ${s.directory}\n  ${s.url}\n  (since ${s.startedAt})`,
+        );
+        await channel.sendMessage(
+          chatJid,
+          `Active CC sessions:\n${lines.join('\n')}`,
+        );
+      }
+    } else if (command.startsWith('/cc-session ')) {
+      const dir = command.slice('/cc-session '.length).trim();
+      const result = await startCcSession(dir, msg.sender, chatJid);
+      if (result.ok) {
+        await channel.sendMessage(chatJid, result.url);
+      } else {
+        await channel.sendMessage(
+          chatJid,
+          `CC session failed: ${result.error}`,
+        );
+      }
+    }
+  }
+
   // Channel callbacks (shared by all channels)
   const channelOpts = {
     onMessage: (chatJid: string, msg: NewMessage) => {
@@ -544,6 +603,20 @@ async function main(): Promise<void> {
       if (trimmed === '/remote-control' || trimmed === '/remote-control-end') {
         handleRemoteControl(trimmed, chatJid, msg).catch((err) =>
           logger.error({ err, chatJid }, 'Remote control command error'),
+        );
+        return;
+      }
+
+      // CC session commands — intercept before storage
+      // Note: bare "/cc-session" (no path) is NOT intercepted — it flows to
+      // the agent so it can ask the user which directory to use.
+      if (
+        trimmed.startsWith('/cc-session-stop ') ||
+        trimmed === '/cc-session-list' ||
+        (trimmed.startsWith('/cc-session ') && trimmed.length > '/cc-session '.length)
+      ) {
+        handleCcSessionCommand(trimmed, chatJid, msg).catch((err) =>
+          logger.error({ err, chatJid }, 'CC session command error'),
         );
         return;
       }

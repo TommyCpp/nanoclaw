@@ -137,6 +137,7 @@ struct ChatView: View {
 
     private let quickActions: [QuickAction] = [
         QuickAction(label: "What now", icon: "newspaper", message: "用中文告诉我过去一小时内最重要的3条新闻"),
+        QuickAction(label: "CC Session", icon: "terminal", message: "/cc-session"),
     ]
 
     private var quickActionBar: some View {

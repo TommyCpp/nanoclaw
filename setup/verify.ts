@@ -92,7 +92,12 @@ export async function run(_args: string[]): Promise<void> {
       execSync('docker info', { stdio: 'ignore' });
       containerRuntime = 'docker';
     } catch {
-      // No runtime
+      try {
+        execSync('podman info', { stdio: 'ignore' });
+        containerRuntime = 'podman';
+      } catch {
+        // No runtime
+      }
     }
   }
 

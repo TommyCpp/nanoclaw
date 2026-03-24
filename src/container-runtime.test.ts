@@ -18,6 +18,8 @@ vi.mock('child_process', () => ({
 
 import {
   CONTAINER_RUNTIME_BIN,
+  CONTAINER_HOST_GATEWAY,
+  detectRuntime,
   readonlyMountArgs,
   stopContainer,
   ensureContainerRuntimeRunning,
@@ -27,6 +29,62 @@ import { logger } from './logger.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+// --- detectRuntime ---
+
+describe('detectRuntime', () => {
+  it('returns CONTAINER_RUNTIME env var when set', () => {
+    const orig = process.env.CONTAINER_RUNTIME;
+    process.env.CONTAINER_RUNTIME = 'podman';
+    try {
+      expect(detectRuntime()).toBe('podman');
+      // Should not call execSync when env var is set
+      expect(mockExecSync).not.toHaveBeenCalled();
+    } finally {
+      if (orig === undefined) delete process.env.CONTAINER_RUNTIME;
+      else process.env.CONTAINER_RUNTIME = orig;
+    }
+  });
+
+  it('auto-detects docker when env var is unset and docker is available', () => {
+    const orig = process.env.CONTAINER_RUNTIME;
+    delete process.env.CONTAINER_RUNTIME;
+    mockExecSync.mockReturnValueOnce(''); // docker info succeeds
+    try {
+      expect(detectRuntime()).toBe('docker');
+    } finally {
+      if (orig !== undefined) process.env.CONTAINER_RUNTIME = orig;
+    }
+  });
+
+  it('falls back to podman when docker is unavailable', () => {
+    const orig = process.env.CONTAINER_RUNTIME;
+    delete process.env.CONTAINER_RUNTIME;
+    mockExecSync.mockImplementationOnce(() => {
+      throw new Error('docker not found');
+    });
+    mockExecSync.mockReturnValueOnce(''); // podman info succeeds
+    try {
+      expect(detectRuntime()).toBe('podman');
+    } finally {
+      if (orig !== undefined) process.env.CONTAINER_RUNTIME = orig;
+    }
+  });
+
+  it('defaults to docker when neither is available', () => {
+    const orig = process.env.CONTAINER_RUNTIME;
+    delete process.env.CONTAINER_RUNTIME;
+    mockExecSync.mockImplementation(() => {
+      throw new Error('not found');
+    });
+    try {
+      expect(detectRuntime()).toBe('docker');
+    } finally {
+      if (orig !== undefined) process.env.CONTAINER_RUNTIME = orig;
+      mockExecSync.mockReset();
+    }
+  });
 });
 
 // --- Pure functions ---

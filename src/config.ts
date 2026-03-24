@@ -71,3 +71,6 @@ export const TRIGGER_PATTERN = new RegExp(
 // Uses system timezone by default
 export const TIMEZONE =
   process.env.TZ || Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+// Claude Code session: only allow sessions under ~/Dev
+export const CC_SESSION_BASE = path.join(HOME_DIR, 'Dev');

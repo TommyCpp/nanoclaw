@@ -19,7 +19,7 @@ import {
 
 /** Single persistent group — all iOS conversations share one history + memory */
 const IOS_JID = 'ios:main';
-const IOS_FOLDER = 'ios_main';
+const IOS_FOLDER = 'ios-main';
 
 interface IosChannelOpts {
   onMessage: OnInboundMessage;
@@ -239,6 +239,7 @@ export class IosChannel implements Channel {
       trigger: `@${ASSISTANT_NAME}`,
       added_at: new Date().toISOString(),
       requiresTrigger: false,
+      isMain: true,
     };
 
     try {

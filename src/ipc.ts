@@ -3,6 +3,11 @@ import path from 'path';
 
 import { CronExpressionParser } from 'cron-parser';
 
+import {
+  listCcSessions,
+  startCcSession,
+  stopCcSession,
+} from './cc-session.js';
 import { DATA_DIR, IPC_POLL_INTERVAL, TIMEZONE } from './config.js';
 import { AvailableGroup } from './container-runner.js';
 import { createTask, deleteTask, getTaskById, updateTask } from './db.js';
@@ -172,6 +177,8 @@ export async function processTaskIpc(
     trigger?: string;
     requiresTrigger?: boolean;
     containerConfig?: RegisteredGroup['containerConfig'];
+    // For cc_session_start / cc_session_stop
+    directory?: string;
   },
   sourceGroup: string, // Verified identity from IPC directory
   isMain: boolean, // Verified from directory path
@@ -455,7 +462,93 @@ export async function processTaskIpc(
       }
       break;
 
+    case 'cc_session_start':
+      if (!isMain) {
+        logger.warn(
+          { sourceGroup },
+          'Unauthorized cc_session_start attempt blocked',
+        );
+        break;
+      }
+      if (data.directory) {
+        const targetJid = data.chatJid || findMainJid(registeredGroups);
+        if (targetJid) {
+          const result = await startCcSession(
+            data.directory,
+            sourceGroup,
+            targetJid,
+          );
+          if (result.ok) {
+            await deps.sendMessage(targetJid, result.url);
+          } else {
+            await deps.sendMessage(
+              targetJid,
+              `CC session failed: ${result.error}`,
+            );
+          }
+        }
+      }
+      break;
+
+    case 'cc_session_stop':
+      if (!isMain) {
+        logger.warn(
+          { sourceGroup },
+          'Unauthorized cc_session_stop attempt blocked',
+        );
+        break;
+      }
+      if (data.directory) {
+        const targetJid = data.chatJid || findMainJid(registeredGroups);
+        const result = stopCcSession(data.directory);
+        if (targetJid) {
+          await deps.sendMessage(
+            targetJid,
+            result.ok
+              ? `CC session stopped for ${data.directory}`
+              : result.error,
+          );
+        }
+      }
+      break;
+
+    case 'cc_session_list':
+      if (!isMain) {
+        logger.warn(
+          { sourceGroup },
+          'Unauthorized cc_session_list attempt blocked',
+        );
+        break;
+      }
+      {
+        const targetJid = data.chatJid || findMainJid(registeredGroups);
+        if (targetJid) {
+          const active = listCcSessions();
+          if (active.length === 0) {
+            await deps.sendMessage(targetJid, 'No active CC sessions.');
+          } else {
+            const lines = active.map(
+              (s) => `• ${s.directory}\n  ${s.url}\n  (since ${s.startedAt})`,
+            );
+            await deps.sendMessage(
+              targetJid,
+              `Active CC sessions:\n${lines.join('\n')}`,
+            );
+          }
+        }
+      }
+      break;
+
     default:
       logger.warn({ type: data.type }, 'Unknown IPC task type');
   }
+}
+
+function findMainJid(
+  groups: Record<string, RegisteredGroup>,
+): string | undefined {
+  for (const [jid, group] of Object.entries(groups)) {
+    if (group.isMain) return jid;
+  }
+  return undefined;
 }

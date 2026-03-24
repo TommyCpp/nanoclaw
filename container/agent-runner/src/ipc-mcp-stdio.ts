@@ -333,6 +333,91 @@ Use available_groups.json to find the JID for a group. The folder name must be c
   },
 );
 
+// --- Claude Code Session tools ---
+
+server.tool(
+  'start_cc_session',
+  `Start a Claude Code session in a directory on the host machine. The directory must be under ~/Dev. Returns a shareable browser URL for the remote-controlled Claude Code session. The session runs in tmux and survives NanoClaw restarts.
+
+The URL will be sent as a chat message (async). This tool returns immediately.`,
+  {
+    directory: z.string().describe('Absolute path or ~/Dev/... path to the project directory'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return {
+        content: [{ type: 'text' as const, text: 'Only main group can start CC sessions.' }],
+        isError: true,
+      };
+    }
+
+    writeIpcFile(TASKS_DIR, {
+      type: 'cc_session_start',
+      directory: args.directory,
+      chatJid,
+      groupFolder,
+      timestamp: new Date().toISOString(),
+    });
+
+    return {
+      content: [{ type: 'text' as const, text: `CC session requested for ${args.directory}. URL will be sent to chat.` }],
+    };
+  },
+);
+
+server.tool(
+  'stop_cc_session',
+  'Stop a running Claude Code session by directory path.',
+  {
+    directory: z.string().describe('The directory of the CC session to stop'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return {
+        content: [{ type: 'text' as const, text: 'Only main group can stop CC sessions.' }],
+        isError: true,
+      };
+    }
+
+    writeIpcFile(TASKS_DIR, {
+      type: 'cc_session_stop',
+      directory: args.directory,
+      chatJid,
+      groupFolder,
+      timestamp: new Date().toISOString(),
+    });
+
+    return {
+      content: [{ type: 'text' as const, text: `CC session stop requested for ${args.directory}.` }],
+    };
+  },
+);
+
+server.tool(
+  'list_cc_sessions',
+  'List all active Claude Code sessions. Results sent to chat.',
+  {},
+  async () => {
+    if (!isMain) {
+      return {
+        content: [{ type: 'text' as const, text: 'Only main group can list CC sessions.' }],
+        isError: true,
+      };
+    }
+
+    writeIpcFile(TASKS_DIR, {
+      type: 'cc_session_list',
+      chatJid,
+      groupFolder,
+      timestamp: new Date().toISOString(),
+    });
+
+    return {
+      content: [{ type: 'text' as const, text: 'CC session list requested. Results will be sent to chat.' }],
+    };
+  },
+);
+
 // Start the stdio transport
 const transport = new StdioServerTransport();
 await server.connect(transport);

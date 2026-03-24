@@ -31,7 +31,7 @@
 		82566C52A47F3B8DFBC03B07 /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		99750EF765017DBC11DB297E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9FBA693F8CE1F0FA97953263 /* NanoClawApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NanoClawApp.swift; sourceTree = "<group>"; };
-		AB70806554C2D54311EC7BBF /* NanoClaw.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NanoClaw.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB70806554C2D54311EC7BBF /* NanoClaw.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NanoClaw.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9B8AF286FA3B6691DFF1041 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C099EBD2121E5D6AE5C3ADDB /* ConnectionConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionConfig.swift; sourceTree = "<group>"; };
 		E60A2B4EF4CA614E78A0813D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -144,7 +144,6 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					39EB4E3D25D09ACF59A62C97 = {
-						DevelopmentTeam = 8HU2W469PT;
 						ProvisioningStyle = Automatic;
 					};
 				};
