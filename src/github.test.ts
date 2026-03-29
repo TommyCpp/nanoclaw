@@ -4,7 +4,9 @@ import os from 'os';
 import path from 'path';
 
 vi.mock('child_process', () => ({
-  execFile: vi.fn((_cmd: string, _args: string[], cb: Function) => cb(null, '', '')),
+  execFile: vi.fn((_cmd: string, _args: string[], cb: Function) =>
+    cb(null, '', ''),
+  ),
 }));
 
 import { execFile as execFileCb } from 'child_process';

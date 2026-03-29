@@ -35,12 +35,15 @@ function saveState(): void {
 
 function sanitizeSessionName(dir: string): string {
   const base = path.basename(dir);
-  return `cc-${base.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase().slice(0, 50)}`;
+  return `cc-${base
+    .replace(/[^a-zA-Z0-9-]/g, '-')
+    .toLowerCase()
+    .slice(0, 50)}`;
 }
 
 function tmuxHasSession(name: string): boolean {
   try {
-    execFileSync(TMUX_BIN,['has-session', '-t', name], { stdio: 'ignore' });
+    execFileSync(TMUX_BIN, ['has-session', '-t', name], { stdio: 'ignore' });
     return true;
   } catch {
     return false;
@@ -49,10 +52,14 @@ function tmuxHasSession(name: string): boolean {
 
 function tmuxCapture(name: string): string {
   try {
-    return execFileSync(TMUX_BIN,['capture-pane', '-p', '-t', name, '-S', '-50'], {
-      encoding: 'utf-8',
-      timeout: 5000,
-    });
+    return execFileSync(
+      TMUX_BIN,
+      ['capture-pane', '-p', '-t', name, '-S', '-50'],
+      {
+        encoding: 'utf-8',
+        timeout: 5000,
+      },
+    );
   } catch {
     return '';
   }
@@ -129,13 +136,23 @@ export async function startCcSession(
       [
         'new-session',
         '-d',
-        '-s', tmuxName,
-        '-c', resolved,
+        '-s',
+        tmuxName,
+        '-c',
+        resolved,
+        '-x',
+        '220',
+        '-y',
+        '50',
         '--',
         CLAUDE_BIN,
         'remote-control',
-        '--name', `CC: ${path.basename(resolved)}`,
-        '--permission-mode', 'bypassPermissions',
+        '--name',
+        `CC: ${path.basename(resolved)}`,
+        '--permission-mode',
+        'bypassPermissions',
+        '--spawn',
+        'same-dir',
       ],
       { stdio: 'ignore', timeout: 10_000 },
     );
@@ -159,13 +176,22 @@ async function reconnectCcSession(
   const marker = `__CC_RECONNECT_${Date.now()}__`;
   try {
     // Print marker then run remote-control — marker lets us ignore scrollback above it
-    execFileSync(TMUX_BIN, [
-      'send-keys', '-t', tmuxName,
-      `echo ${marker} && ${CLAUDE_BIN} remote-control --name "CC: ${path.basename(resolved)}" --permission-mode bypassPermissions`,
-      'Enter',
-    ], { stdio: 'ignore', timeout: 5000 });
+    execFileSync(
+      TMUX_BIN,
+      [
+        'send-keys',
+        '-t',
+        tmuxName,
+        `echo ${marker} && ${CLAUDE_BIN} remote-control --name "CC: ${path.basename(resolved)}" --permission-mode bypassPermissions --spawn same-dir`,
+        'Enter',
+      ],
+      { stdio: 'ignore', timeout: 5000 },
+    );
   } catch (err: any) {
-    return { ok: false, error: `Failed to reconnect tmux session: ${err.message}` };
+    return {
+      ok: false,
+      error: `Failed to reconnect tmux session: ${err.message}`,
+    };
   }
 
   logger.info({ tmuxName, directory: resolved }, 'CC session reconnecting');
@@ -189,7 +215,10 @@ function pollForUrl(
 
     const poll = () => {
       if (!tmuxHasSession(tmuxName)) {
-        resolve({ ok: false, error: 'tmux session exited before producing URL' });
+        resolve({
+          ok: false,
+          error: 'tmux session exited before producing URL',
+        });
         return;
       }
 
@@ -222,10 +251,17 @@ function pollForUrl(
       if (Date.now() - startTime >= URL_TIMEOUT_MS) {
         if (killOnTimeout) {
           try {
-            execFileSync(TMUX_BIN, ['kill-session', '-t', tmuxName], { stdio: 'ignore' });
-          } catch { /* already dead */ }
+            execFileSync(TMUX_BIN, ['kill-session', '-t', tmuxName], {
+              stdio: 'ignore',
+            });
+          } catch {
+            /* already dead */
+          }
         }
-        resolve({ ok: false, error: 'Timed out waiting for Remote Control URL' });
+        resolve({
+          ok: false,
+          error: 'Timed out waiting for Remote Control URL',
+        });
         return;
       }
 
@@ -250,10 +286,12 @@ export function stopCcSession(
   }
 
   try {
-    execFileSync(TMUX_BIN,['kill-session', '-t', session.tmuxSession], {
+    execFileSync(TMUX_BIN, ['kill-session', '-t', session.tmuxSession], {
       stdio: 'ignore',
     });
-  } catch { /* already dead */ }
+  } catch {
+    /* already dead */
+  }
 
   sessions.delete(resolved);
   saveState();
@@ -293,7 +331,11 @@ export function restoreCcSessions(): void {
       if (tmuxHasSession(session.tmuxSession)) {
         sessions.set(session.directory, session);
         logger.info(
-          { tmuxSession: session.tmuxSession, directory: session.directory, url: session.url },
+          {
+            tmuxSession: session.tmuxSession,
+            directory: session.directory,
+            url: session.url,
+          },
           'Restored CC session from previous run',
         );
       }

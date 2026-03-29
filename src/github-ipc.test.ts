@@ -2,10 +2,13 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 vi.mock('./github.js', () => ({
   ALLOWED_REPOS_PATH: '/mock/config/allowed-repos.json',
-  cloneOrPullRepo: vi
+  cloneOrPullRepo: vi.fn().mockResolvedValue({
+    ok: true,
+    message: 'owner/myrepo cloned to ~/Dev/myrepo',
+  }),
+  runIssueCommand: vi
     .fn()
-    .mockResolvedValue({ ok: true, message: 'owner/myrepo cloned to ~/Dev/myrepo' }),
-  runIssueCommand: vi.fn().mockResolvedValue({ ok: true, message: 'Issues listed' }),
+    .mockResolvedValue({ ok: true, message: 'Issues listed' }),
 }));
 
 import { _initTestDatabase, setRegisteredGroup } from './db.js';

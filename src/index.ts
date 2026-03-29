@@ -3,6 +3,7 @@ import path from 'path';
 
 import {
   ASSISTANT_NAME,
+  CC_SESSION_BASE,
   CREDENTIAL_PROXY_PORT,
   IDLE_TIMEOUT,
   POLL_INTERVAL,
@@ -581,8 +582,44 @@ async function main(): Promise<void> {
           `Active CC sessions:\n${lines.join('\n')}`,
         );
       }
+    } else if (command === '/cc-session') {
+      // List ~/Dev directories for the user to pick from
+      let dirs: string[];
+      try {
+        dirs = fs
+          .readdirSync(CC_SESSION_BASE, { withFileTypes: true })
+          .filter((d) => d.isDirectory() && !d.name.startsWith('.'))
+          .map((d) => d.name)
+          .sort();
+      } catch {
+        dirs = [];
+      }
+      if (dirs.length === 0) {
+        await channel.sendMessage(chatJid, 'No directories found under ~/Dev.');
+      } else {
+        const list = dirs.map((d, i) => `${i + 1}. ${d}`).join('\n');
+        await channel.sendMessage(
+          chatJid,
+          `Pick a project:\n${list}\n\nReply with /cc-session <name or number>`,
+        );
+      }
     } else if (command.startsWith('/cc-session ')) {
-      const dir = command.slice('/cc-session '.length).trim();
+      let arg = command.slice('/cc-session '.length).trim();
+      // Accept index (e.g. "1") from the listing
+      const idx = parseInt(arg, 10);
+      if (!isNaN(idx)) {
+        const dirs = fs
+          .readdirSync(CC_SESSION_BASE, { withFileTypes: true })
+          .filter((d) => d.isDirectory() && !d.name.startsWith('.'))
+          .map((d) => d.name)
+          .sort();
+        arg = dirs[idx - 1] ?? arg;
+      }
+      // Accept bare names like "nanoclaw" as shorthand for ~/Dev/nanoclaw
+      const dir =
+        arg.startsWith('/') || arg.startsWith('~/')
+          ? arg
+          : path.join(CC_SESSION_BASE, arg);
       const result = await startCcSession(dir, msg.sender, chatJid);
       if (result.ok) {
         await channel.sendMessage(chatJid, result.url);
@@ -598,24 +635,29 @@ async function main(): Promise<void> {
   // Channel callbacks (shared by all channels)
   const channelOpts = {
     onMessage: (chatJid: string, msg: NewMessage) => {
-      // Remote control commands — intercept before storage
       const trimmed = msg.content.trim();
-      if (trimmed === '/remote-control' || trimmed === '/remote-control-end') {
-        handleRemoteControl(trimmed, chatJid, msg).catch((err) =>
+      // Strip trigger prefix (e.g. "@Andy ") so slash commands work from any channel
+      const triggerPrefix = `@${ASSISTANT_NAME} `;
+      const command = trimmed.startsWith(triggerPrefix)
+        ? trimmed.slice(triggerPrefix.length).trimStart()
+        : trimmed;
+
+      // Remote control commands — intercept before storage
+      if (command === '/remote-control' || command === '/remote-control-end') {
+        handleRemoteControl(command, chatJid, msg).catch((err) =>
           logger.error({ err, chatJid }, 'Remote control command error'),
         );
         return;
       }
 
       // CC session commands — intercept before storage
-      // Note: bare "/cc-session" (no path) is NOT intercepted — it flows to
-      // the agent so it can ask the user which directory to use.
       if (
-        trimmed.startsWith('/cc-session-stop ') ||
-        trimmed === '/cc-session-list' ||
-        (trimmed.startsWith('/cc-session ') && trimmed.length > '/cc-session '.length)
+        command === '/cc-session' ||
+        command.startsWith('/cc-session ') ||
+        command.startsWith('/cc-session-stop ') ||
+        command === '/cc-session-list'
       ) {
-        handleCcSessionCommand(trimmed, chatJid, msg).catch((err) =>
+        handleCcSessionCommand(command, chatJid, msg).catch((err) =>
           logger.error({ err, chatJid }, 'CC session command error'),
         );
         return;

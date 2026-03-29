@@ -4,7 +4,11 @@ import path from 'path';
 import { CronExpressionParser } from 'cron-parser';
 
 import { listCcSessions, startCcSession, stopCcSession } from './cc-session.js';
-import { cloneOrPullRepo, runIssueCommand, ALLOWED_REPOS_PATH } from './github.js';
+import {
+  cloneOrPullRepo,
+  runIssueCommand,
+  ALLOWED_REPOS_PATH,
+} from './github.js';
 import { DATA_DIR, IPC_POLL_INTERVAL, TIMEZONE } from './config.js';
 import { AvailableGroup } from './container-runner.js';
 import { createTask, deleteTask, getTaskById, updateTask } from './db.js';
