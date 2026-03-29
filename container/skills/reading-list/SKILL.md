@@ -45,10 +45,9 @@ If no rows are returned, register it via `mcp__nanoclaw__schedule_task`:
 - **prompt**:
 
 ```
-Run the tach CLI to process today's reading list.
+Run the tach reading list processor:
 
-# TODO: replace with the actual tach CLI entry point once defined
-cd /workspace/extra/tach && <tach-cli-command>
+python /workspace/extra/tach/scripts/process-reading-list.py
 ```
 
 Once registered, do not register again.
