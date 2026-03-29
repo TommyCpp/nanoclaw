@@ -3,11 +3,8 @@ import path from 'path';
 
 import { CronExpressionParser } from 'cron-parser';
 
-import {
-  listCcSessions,
-  startCcSession,
-  stopCcSession,
-} from './cc-session.js';
+import { listCcSessions, startCcSession, stopCcSession } from './cc-session.js';
+import { cloneOrPullRepo, runIssueCommand, ALLOWED_REPOS_PATH } from './github.js';
 import { DATA_DIR, IPC_POLL_INTERVAL, TIMEZONE } from './config.js';
 import { AvailableGroup } from './container-runner.js';
 import { createTask, deleteTask, getTaskById, updateTask } from './db.js';
@@ -179,6 +176,16 @@ export async function processTaskIpc(
     containerConfig?: RegisteredGroup['containerConfig'];
     // For cc_session_start / cc_session_stop
     directory?: string;
+    // For clone_repo and gh_* issue commands
+    repo?: string;
+    issue_number?: number;
+    title?: string;
+    body?: string;
+    labels?: string[];
+    assignees?: string[];
+    state?: string;
+    assignee?: string;
+    limit?: number;
   },
   sourceGroup: string, // Verified identity from IPC directory
   isMain: boolean, // Verified from directory path
@@ -535,6 +542,58 @@ export async function processTaskIpc(
               `Active CC sessions:\n${lines.join('\n')}`,
             );
           }
+        }
+      }
+      break;
+
+    case 'clone_repo':
+      if (!isMain) {
+        logger.warn({ sourceGroup }, 'Unauthorized clone_repo attempt blocked');
+        break;
+      }
+      if (data.repo) {
+        const targetJid = data.chatJid || findMainJid(registeredGroups);
+        if (targetJid) {
+          const result = await cloneOrPullRepo(data.repo);
+          await deps.sendMessage(targetJid, result.message);
+        }
+      }
+      break;
+
+    case 'gh_list_issues':
+    case 'gh_get_issue':
+    case 'gh_create_issue':
+    case 'gh_comment_issue':
+    case 'gh_close_issue':
+    case 'gh_reopen_issue':
+    case 'gh_add_labels':
+    case 'gh_set_assignees':
+      if (!isMain) {
+        logger.warn(
+          { sourceGroup, type: data.type },
+          'Unauthorized GitHub issue command blocked',
+        );
+        break;
+      }
+      if (data.repo) {
+        const targetJid = data.chatJid || findMainJid(registeredGroups);
+        if (targetJid) {
+          const result = await runIssueCommand(
+            data.type,
+            {
+              repo: data.repo,
+              issue_number: data.issue_number,
+              title: data.title,
+              body: data.body,
+              labels: data.labels,
+              assignees: data.assignees,
+              state: data.state,
+              assignee: data.assignee,
+              limit: data.limit,
+            },
+            ALLOWED_REPOS_PATH,
+          );
+          await deps.sendMessage(targetJid, result.message);
         }
       }
       break;

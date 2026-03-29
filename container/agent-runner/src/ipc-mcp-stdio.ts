@@ -333,6 +333,175 @@ Use available_groups.json to find the JID for a group. The folder name must be c
   },
 );
 
+// --- GitHub tools ---
+
+server.tool(
+  'clone_repo',
+  `Clone a GitHub repo into ~/Dev/<repo-name>, or pull (update) it if it already exists there.
+Accepts owner/repo shorthand or full https://github.com/... URL.
+Result (success or error) will be sent to chat. Main group only.`,
+  {
+    repo: z.string().describe('GitHub repo in owner/repo or full URL format'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return {
+        content: [{ type: 'text' as const, text: 'Only main group can clone/pull repos.' }],
+        isError: true,
+      };
+    }
+
+    writeIpcFile(TASKS_DIR, {
+      type: 'clone_repo',
+      repo: args.repo,
+      chatJid,
+      groupFolder,
+      timestamp: new Date().toISOString(),
+    });
+
+    return {
+      content: [{ type: 'text' as const, text: `Clone/pull requested for ${args.repo}. Result will be sent to chat.` }],
+    };
+  },
+);
+
+server.tool(
+  'list_issues',
+  'List GitHub issues for an allowlisted repo. Result sent to chat.',
+  {
+    repo: z.string().describe('GitHub repo (owner/repo) — must be in config/allowed-repos.json'),
+    state: z.enum(['open', 'closed', 'all']).default('open').describe('Issue state filter'),
+    labels: z.array(z.string()).optional().describe('Filter by labels'),
+    assignee: z.string().optional().describe('Filter by assignee username'),
+    limit: z.number().optional().describe('Max issues to return (default: 30)'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return { content: [{ type: 'text' as const, text: 'Only main group can use GitHub tools.' }], isError: true };
+    }
+    writeIpcFile(TASKS_DIR, { type: 'gh_list_issues', repo: args.repo, state: args.state, labels: args.labels, assignee: args.assignee, limit: args.limit, chatJid, groupFolder, timestamp: new Date().toISOString() });
+    return { content: [{ type: 'text' as const, text: 'Fetching issues…' }] };
+  },
+);
+
+server.tool(
+  'get_issue',
+  'Get full details of a GitHub issue including comments.',
+  {
+    repo: z.string().describe('GitHub repo (owner/repo)'),
+    issue_number: z.number().describe('Issue number'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return { content: [{ type: 'text' as const, text: 'Only main group can use GitHub tools.' }], isError: true };
+    }
+    writeIpcFile(TASKS_DIR, { type: 'gh_get_issue', repo: args.repo, issue_number: args.issue_number, chatJid, groupFolder, timestamp: new Date().toISOString() });
+    return { content: [{ type: 'text' as const, text: `Fetching issue #${args.issue_number}…` }] };
+  },
+);
+
+server.tool(
+  'create_issue',
+  'Create a new GitHub issue.',
+  {
+    repo: z.string().describe('GitHub repo (owner/repo)'),
+    title: z.string().describe('Issue title'),
+    body: z.string().optional().describe('Issue body (markdown)'),
+    labels: z.array(z.string()).optional().describe('Labels to apply'),
+    assignees: z.array(z.string()).optional().describe('Assignee usernames'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return { content: [{ type: 'text' as const, text: 'Only main group can use GitHub tools.' }], isError: true };
+    }
+    writeIpcFile(TASKS_DIR, { type: 'gh_create_issue', repo: args.repo, title: args.title, body: args.body, labels: args.labels, assignees: args.assignees, chatJid, groupFolder, timestamp: new Date().toISOString() });
+    return { content: [{ type: 'text' as const, text: `Creating issue "${args.title}"…` }] };
+  },
+);
+
+server.tool(
+  'comment_issue',
+  'Add a comment to a GitHub issue.',
+  {
+    repo: z.string().describe('GitHub repo (owner/repo)'),
+    issue_number: z.number().describe('Issue number'),
+    body: z.string().describe('Comment text (markdown)'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return { content: [{ type: 'text' as const, text: 'Only main group can use GitHub tools.' }], isError: true };
+    }
+    writeIpcFile(TASKS_DIR, { type: 'gh_comment_issue', repo: args.repo, issue_number: args.issue_number, body: args.body, chatJid, groupFolder, timestamp: new Date().toISOString() });
+    return { content: [{ type: 'text' as const, text: `Adding comment to #${args.issue_number}…` }] };
+  },
+);
+
+server.tool(
+  'close_issue',
+  'Close a GitHub issue.',
+  {
+    repo: z.string().describe('GitHub repo (owner/repo)'),
+    issue_number: z.number().describe('Issue number'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return { content: [{ type: 'text' as const, text: 'Only main group can use GitHub tools.' }], isError: true };
+    }
+    writeIpcFile(TASKS_DIR, { type: 'gh_close_issue', repo: args.repo, issue_number: args.issue_number, chatJid, groupFolder, timestamp: new Date().toISOString() });
+    return { content: [{ type: 'text' as const, text: `Closing issue #${args.issue_number}…` }] };
+  },
+);
+
+server.tool(
+  'reopen_issue',
+  'Reopen a closed GitHub issue.',
+  {
+    repo: z.string().describe('GitHub repo (owner/repo)'),
+    issue_number: z.number().describe('Issue number'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return { content: [{ type: 'text' as const, text: 'Only main group can use GitHub tools.' }], isError: true };
+    }
+    writeIpcFile(TASKS_DIR, { type: 'gh_reopen_issue', repo: args.repo, issue_number: args.issue_number, chatJid, groupFolder, timestamp: new Date().toISOString() });
+    return { content: [{ type: 'text' as const, text: `Reopening issue #${args.issue_number}…` }] };
+  },
+);
+
+server.tool(
+  'add_labels',
+  'Add labels to a GitHub issue.',
+  {
+    repo: z.string().describe('GitHub repo (owner/repo)'),
+    issue_number: z.number().describe('Issue number'),
+    labels: z.array(z.string()).describe('Labels to add'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return { content: [{ type: 'text' as const, text: 'Only main group can use GitHub tools.' }], isError: true };
+    }
+    writeIpcFile(TASKS_DIR, { type: 'gh_add_labels', repo: args.repo, issue_number: args.issue_number, labels: args.labels, chatJid, groupFolder, timestamp: new Date().toISOString() });
+    return { content: [{ type: 'text' as const, text: `Adding labels to #${args.issue_number}…` }] };
+  },
+);
+
+server.tool(
+  'set_assignees',
+  'Set assignees on a GitHub issue (replaces existing assignees).',
+  {
+    repo: z.string().describe('GitHub repo (owner/repo)'),
+    issue_number: z.number().describe('Issue number'),
+    assignees: z.array(z.string()).describe('GitHub usernames to assign'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return { content: [{ type: 'text' as const, text: 'Only main group can use GitHub tools.' }], isError: true };
+    }
+    writeIpcFile(TASKS_DIR, { type: 'gh_set_assignees', repo: args.repo, issue_number: args.issue_number, assignees: args.assignees, chatJid, groupFolder, timestamp: new Date().toISOString() });
+    return { content: [{ type: 'text' as const, text: `Setting assignees on #${args.issue_number}…` }] };
+  },
+);
+
 // --- Claude Code Session tools ---
 
 server.tool(

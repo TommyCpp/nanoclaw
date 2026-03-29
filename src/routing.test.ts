@@ -1,4 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+
+vi.mock('./github.js', () => ({
+  ALLOWED_REPOS_PATH: '/mock/allowed-repos.json',
+  cloneOrPullRepo: vi.fn(),
+  runIssueCommand: vi.fn(),
+}));
 
 import { _initTestDatabase, getAllChats, storeChatMetadata } from './db.js';
 import { getAvailableGroups, _setRegisteredGroups } from './index.js';
