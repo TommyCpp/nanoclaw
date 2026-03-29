@@ -190,8 +190,21 @@ function buildVolumeMounts(
     group.folder,
     'agent-runner-src',
   );
-  if (!fs.existsSync(groupAgentRunnerDir) && fs.existsSync(agentRunnerSrc)) {
-    fs.cpSync(agentRunnerSrc, groupAgentRunnerDir, { recursive: true });
+  // Sync agent-runner source: copy new files and update existing ones if the
+  // upstream source is newer. Per-group copies let agents customise their
+  // runner; we only overwrite when the canonical source has changed, so
+  // agent-made edits (which will have a newer mtime) are preserved.
+  if (fs.existsSync(agentRunnerSrc)) {
+    fs.mkdirSync(groupAgentRunnerDir, { recursive: true });
+    for (const file of fs.readdirSync(agentRunnerSrc)) {
+      const srcFile = path.join(agentRunnerSrc, file);
+      if (!fs.statSync(srcFile).isFile()) continue;
+      const dstFile = path.join(groupAgentRunnerDir, file);
+      const srcMtime = fs.statSync(srcFile).mtimeMs;
+      if (!fs.existsSync(dstFile) || srcMtime > fs.statSync(dstFile).mtimeMs) {
+        fs.copyFileSync(srcFile, dstFile);
+      }
+    }
   }
   mounts.push({
     hostPath: groupAgentRunnerDir,
@@ -216,7 +229,15 @@ function buildContainerArgs(
   mounts: VolumeMount[],
   containerName: string,
 ): string[] {
-  const args: string[] = ['run', '-i', '--rm', '--name', containerName, '--memory', '2g'];
+  const args: string[] = [
+    'run',
+    '-i',
+    '--rm',
+    '--name',
+    containerName,
+    '--memory',
+    '2g',
+  ];
 
   // Pass host timezone so container's local time matches the user's
   args.push('-e', `TZ=${TIMEZONE}`);
