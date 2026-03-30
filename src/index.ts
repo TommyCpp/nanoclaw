@@ -39,6 +39,7 @@ import {
   initDatabase,
   setRegisteredGroup,
   setRouterState,
+  deleteSession,
   setSession,
   storeChatMetadata,
   storeMessage,
@@ -689,6 +690,10 @@ async function main(): Promise<void> {
       isGroup?: boolean,
     ) => storeChatMetadata(chatJid, timestamp, name, channel, isGroup),
     registeredGroups: () => registeredGroups,
+    clearSession: (folder: string) => {
+      delete sessions[folder];
+      deleteSession(folder);
+    },
   };
 
   // Create and connect all registered channels.
