@@ -4,7 +4,7 @@ import { setRegisteredGroup } from '../db.js';
 import { readEnvFile } from '../env.js';
 import { logger } from '../logger.js';
 import { registerChannel, ChannelOpts } from './registry.js';
-import { Channel, OnChatMetadata, OnInboundMessage } from '../types.js';
+import { Channel, OnChatMetadata, OnInboundMessage, RegisteredGroup } from '../types.js';
 
 const TEST_JID = 'test:local';
 const TEST_FOLDER = 'test-local';
@@ -12,6 +12,7 @@ const TEST_FOLDER = 'test-local';
 interface TestChannelOpts {
   onMessage: OnInboundMessage;
   onChatMetadata: OnChatMetadata;
+  registeredGroups: () => Record<string, RegisteredGroup>;
   clearSession?: (folder: string) => void;
   port: number;
 }
@@ -45,13 +46,24 @@ export class TestChannel implements Channel {
   }
 
   private ensureGroupRegistered(): void {
-    setRegisteredGroup(TEST_JID, {
+    const groups = this.opts.registeredGroups();
+
+    const group: RegisteredGroup = {
       name: 'Test',
       folder: TEST_FOLDER,
       trigger: '@test',
       added_at: new Date().toISOString(),
       requiresTrigger: false,
-    });
+      isMain: true,
+    };
+
+    try {
+      setRegisteredGroup(TEST_JID, group);
+      groups[TEST_JID] = group;
+      logger.info({ jid: TEST_JID }, 'Test channel: registered test:local group');
+    } catch (err) {
+      logger.error({ err }, 'Test channel: failed to register group');
+    }
   }
 
   private handleRequest(req: IncomingMessage, res: ServerResponse): void {
@@ -61,7 +73,9 @@ export class TestChannel implements Channel {
     // POST /message — send a message into the agent
     if (method === 'POST' && url === '/message') {
       let body = '';
-      req.on('data', (chunk) => { body += chunk; });
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
       req.on('end', () => {
         let text: string;
         try {
@@ -79,7 +93,13 @@ export class TestChannel implements Channel {
         }
 
         const msgId = `test-${Date.now()}`;
-        this.opts.onChatMetadata(TEST_JID, new Date().toISOString(), 'Test', 'test', false);
+        this.opts.onChatMetadata(
+          TEST_JID,
+          new Date().toISOString(),
+          'Test',
+          'test',
+          false,
+        );
         this.opts.onMessage(TEST_JID, {
           id: msgId,
           chat_jid: TEST_JID,
@@ -118,7 +138,10 @@ export class TestChannel implements Channel {
 
   async sendMessage(_jid: string, text: string): Promise<void> {
     this.buffer.push(text);
-    logger.debug({ length: text.length }, 'Test channel: buffered outbound message');
+    logger.debug(
+      { length: text.length },
+      'Test channel: buffered outbound message',
+    );
   }
 
   isConnected(): boolean {
@@ -137,7 +160,8 @@ export class TestChannel implements Channel {
 registerChannel('test', (opts: ChannelOpts) => {
   const envVars = readEnvFile(['TEST_CHANNEL_ENABLED', 'TEST_CHANNEL_PORT']);
   const enabled =
-    (process.env.TEST_CHANNEL_ENABLED || envVars.TEST_CHANNEL_ENABLED) === 'true';
+    (process.env.TEST_CHANNEL_ENABLED || envVars.TEST_CHANNEL_ENABLED) ===
+    'true';
   if (!enabled) return null;
 
   const port = parseInt(
@@ -148,6 +172,7 @@ registerChannel('test', (opts: ChannelOpts) => {
   return new TestChannel({
     onMessage: opts.onMessage,
     onChatMetadata: opts.onChatMetadata,
+    registeredGroups: opts.registeredGroups,
     clearSession: opts.clearSession,
     port,
   });
