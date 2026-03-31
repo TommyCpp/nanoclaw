@@ -4,7 +4,12 @@ import { setRegisteredGroup } from '../db.js';
 import { readEnvFile } from '../env.js';
 import { logger } from '../logger.js';
 import { registerChannel, ChannelOpts } from './registry.js';
-import { Channel, OnChatMetadata, OnInboundMessage, RegisteredGroup } from '../types.js';
+import {
+  Channel,
+  OnChatMetadata,
+  OnInboundMessage,
+  RegisteredGroup,
+} from '../types.js';
 
 const TEST_JID = 'test:local';
 const TEST_FOLDER = 'test-local';
@@ -60,7 +65,10 @@ export class TestChannel implements Channel {
     try {
       setRegisteredGroup(TEST_JID, group);
       groups[TEST_JID] = group;
-      logger.info({ jid: TEST_JID }, 'Test channel: registered test:local group');
+      logger.info(
+        { jid: TEST_JID },
+        'Test channel: registered test:local group',
+      );
     } catch (err) {
       logger.error({ err }, 'Test channel: failed to register group');
     }

@@ -17,7 +17,7 @@ import { logger } from './logger.js';
 import { RegisteredGroup } from './types.js';
 
 export interface IpcDeps {
-  sendMessage: (jid: string, text: string) => Promise<void>;
+  sendMessage: (jid: string, text: string, subtype?: string, tool?: string) => Promise<void>;
   registeredGroups: () => Record<string, RegisteredGroup>;
   registerGroup: (jid: string, group: RegisteredGroup) => void;
   syncGroups: (force: boolean) => Promise<void>;
@@ -490,11 +490,12 @@ export async function processTaskIpc(
             targetJid,
           );
           if (result.ok) {
-            await deps.sendMessage(targetJid, result.url);
+            await deps.sendMessage(targetJid, result.url, 'event', 'start_cc_session');
           } else {
             await deps.sendMessage(
               targetJid,
               `CC session failed: ${result.error}`,
+              'event', 'start_cc_session',
             );
           }
         }
@@ -518,6 +519,7 @@ export async function processTaskIpc(
             result.ok
               ? `CC session stopped for ${data.directory}`
               : result.error,
+            'event', 'stop_cc_session',
           );
         }
       }
@@ -536,7 +538,7 @@ export async function processTaskIpc(
         if (targetJid) {
           const active = listCcSessions();
           if (active.length === 0) {
-            await deps.sendMessage(targetJid, 'No active CC sessions.');
+            await deps.sendMessage(targetJid, 'No active CC sessions.', 'event', 'list_cc_sessions');
           } else {
             const lines = active.map(
               (s) => `• ${s.directory}\n  ${s.url}\n  (since ${s.startedAt})`,
@@ -544,6 +546,7 @@ export async function processTaskIpc(
             await deps.sendMessage(
               targetJid,
               `Active CC sessions:\n${lines.join('\n')}`,
+              'event', 'list_cc_sessions',
             );
           }
         }
@@ -559,7 +562,7 @@ export async function processTaskIpc(
         const targetJid = data.chatJid || findMainJid(registeredGroups);
         if (targetJid) {
           const result = await cloneOrPullRepo(data.repo);
-          await deps.sendMessage(targetJid, result.message);
+          await deps.sendMessage(targetJid, result.message, 'event', 'clone_repo');
         }
       }
       break;
@@ -597,7 +600,7 @@ export async function processTaskIpc(
             },
             ALLOWED_REPOS_PATH,
           );
-          await deps.sendMessage(targetJid, result.message);
+          await deps.sendMessage(targetJid, result.message, 'event', data.type);
         }
       }
       break;

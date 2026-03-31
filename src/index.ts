@@ -528,19 +528,20 @@ async function main(): Promise<void> {
         process.cwd(),
       );
       if (result.ok) {
-        await channel.sendMessage(chatJid, result.url);
+        await channel.sendMessage(chatJid, result.url, 'event', 'start_remote_control');
       } else {
         await channel.sendMessage(
           chatJid,
           `Remote Control failed: ${result.error}`,
+          'event', 'start_remote_control',
         );
       }
     } else {
       const result = stopRemoteControl();
       if (result.ok) {
-        await channel.sendMessage(chatJid, 'Remote Control session ended.');
+        await channel.sendMessage(chatJid, 'Remote Control session ended.', 'event', 'stop_remote_control');
       } else {
-        await channel.sendMessage(chatJid, result.error);
+        await channel.sendMessage(chatJid, result.error, 'event', 'stop_remote_control');
       }
     }
   }
@@ -569,11 +570,12 @@ async function main(): Promise<void> {
       await channel.sendMessage(
         chatJid,
         result.ok ? `CC session stopped for ${dir}` : result.error,
+        'event', 'stop_cc_session',
       );
     } else if (command === '/cc-session-list') {
       const active = listCcSessions();
       if (active.length === 0) {
-        await channel.sendMessage(chatJid, 'No active CC sessions.');
+        await channel.sendMessage(chatJid, 'No active CC sessions.', 'event', 'list_cc_sessions');
       } else {
         const lines = active.map(
           (s) => `• ${s.directory}\n  ${s.url}\n  (since ${s.startedAt})`,
@@ -581,6 +583,7 @@ async function main(): Promise<void> {
         await channel.sendMessage(
           chatJid,
           `Active CC sessions:\n${lines.join('\n')}`,
+          'event', 'list_cc_sessions',
         );
       }
     } else if (command === '/cc-session') {
@@ -596,12 +599,13 @@ async function main(): Promise<void> {
         dirs = [];
       }
       if (dirs.length === 0) {
-        await channel.sendMessage(chatJid, 'No directories found under ~/Dev.');
+        await channel.sendMessage(chatJid, 'No directories found under ~/Dev.', 'event', 'list_cc_sessions');
       } else {
         const list = dirs.map((d, i) => `${i + 1}. ${d}`).join('\n');
         await channel.sendMessage(
           chatJid,
           `Pick a project:\n${list}\n\nReply with /cc-session <name or number>`,
+          'event', 'list_cc_sessions',
         );
       }
     } else if (command.startsWith('/cc-session ')) {
@@ -623,11 +627,12 @@ async function main(): Promise<void> {
           : path.join(CC_SESSION_BASE, arg);
       const result = await startCcSession(dir, msg.sender, chatJid);
       if (result.ok) {
-        await channel.sendMessage(chatJid, result.url);
+        await channel.sendMessage(chatJid, result.url, 'event', 'start_cc_session');
       } else {
         await channel.sendMessage(
           chatJid,
           `CC session failed: ${result.error}`,
+          'event', 'start_cc_session',
         );
       }
     }
@@ -735,10 +740,10 @@ async function main(): Promise<void> {
     },
   });
   startIpcWatcher({
-    sendMessage: (jid, text) => {
+    sendMessage: (jid, text, subtype?, tool?) => {
       const channel = findChannel(channels, jid);
       if (!channel) throw new Error(`No channel for JID: ${jid}`);
-      return channel.sendMessage(jid, text);
+      return channel.sendMessage(jid, text, subtype, tool);
     },
     registeredGroups: () => registeredGroups,
     registerGroup,
