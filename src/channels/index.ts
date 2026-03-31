@@ -14,3 +14,6 @@ import './discord.js';
 
 // ios
 import './ios.js';
+
+// test (local dev only — enabled via TEST_CHANNEL_ENABLED=true)
+import './test.js';

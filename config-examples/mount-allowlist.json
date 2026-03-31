@@ -11,6 +11,11 @@
       "description": "Git repositories"
     },
     {
+      "path": "~/Dev",
+      "allowReadWrite": true,
+      "description": "Development directory (e.g. ~/Dev/tach for reading list integration)"
+    },
+    {
       "path": "~/Documents/work",
       "allowReadWrite": false,
       "description": "Work documents (read-only)"

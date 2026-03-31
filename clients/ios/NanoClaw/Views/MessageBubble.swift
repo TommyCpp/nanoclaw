@@ -4,27 +4,79 @@ struct MessageBubble: View {
     let message: Message
 
     private var isUser: Bool { message.role == .user }
+    private var isEvent: Bool { message.subtype == .event }
 
     var body: some View {
-        HStack {
-            if isUser { Spacer(minLength: 60) }
+        if isEvent {
+            eventBubble
+        } else {
+            HStack {
+                if isUser { Spacer(minLength: 60) }
 
-            bubbleContent
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(bubbleBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .contextMenu {
-                    Button {
-                        UIPasteboard.general.string = message.text
-                    } label: {
-                        Label("Copy", systemImage: "doc.on.doc")
+                bubbleContent
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(bubbleBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .contextMenu {
+                        Button {
+                            UIPasteboard.general.string = message.text
+                        } label: {
+                            Label("Copy", systemImage: "doc.on.doc")
+                        }
                     }
-                }
 
-            if !isUser { Spacer(minLength: 60) }
+                if !isUser { Spacer(minLength: 60) }
+            }
         }
     }
+
+    // MARK: - Event (terminal-style) bubble
+
+    private var eventBubble: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header: $ tool_name
+            HStack(spacing: 6) {
+                Text("$")
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color(hex: 0x4A9E4A))
+                Text(message.tool ?? "event")
+                    .font(.system(size: 11, weight: .regular, design: .monospaced))
+                    .foregroundStyle(Color(hex: 0x888888))
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 9)
+            .padding(.bottom, 5)
+
+            // Divider
+            Color(hex: 0x2A2A2A).frame(height: 1)
+
+            // Output
+            Text(message.text)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundStyle(Color(hex: 0xCCCCCC))
+                .textSelection(.enabled)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .background(Color(hex: 0x141414))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color(hex: 0x2A2A2A), lineWidth: 1)
+        )
+        .contextMenu {
+            Button {
+                UIPasteboard.general.string = message.text
+            } label: {
+                Label("Copy", systemImage: "doc.on.doc")
+            }
+        }
+        .padding(.trailing, 40)
+    }
+
+    // MARK: - Normal bubble
 
     @ViewBuilder
     private var bubbleContent: some View {

@@ -181,8 +181,11 @@ export class IosChannel implements Channel {
     });
   }
 
-  async sendMessage(_jid: string, text: string): Promise<void> {
-    const token = JSON.stringify({ type: 'token', text });
+  async sendMessage(_jid: string, text: string, subtype?: string, tool?: string): Promise<void> {
+    const tokenPayload: Record<string, string> = { type: 'token', text };
+    if (subtype) tokenPayload.subtype = subtype;
+    if (tool) tokenPayload.tool = tool;
+    const token = JSON.stringify(tokenPayload);
     const done = JSON.stringify({ type: 'done' });
     const connected = [...this.clients].filter(
       (ws) => ws.readyState === WebSocket.OPEN,

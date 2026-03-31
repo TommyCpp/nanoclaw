@@ -275,7 +275,9 @@ final class WebSocketService: ObservableObject {
 
         case "token":
             guard let tokenText = json["text"] as? String else { return }
-            appendToken(tokenText)
+            let subtype = json["subtype"] as? String
+            let tool = json["tool"] as? String
+            appendToken(tokenText, subtype: subtype, tool: tool)
 
         case "done":
             isStreaming = false
@@ -307,12 +309,20 @@ final class WebSocketService: ObservableObject {
         }
     }
 
-    private func appendToken(_ token: String) {
+    private func appendToken(_ token: String, subtype: String? = nil, tool: String? = nil) {
+        let messageSubtype: Message.Subtype = subtype == "event" ? .event : .agent
+        // Event messages never merge with other messages
+        if messageSubtype == .event {
+            let eventMessage = Message(role: .assistant, text: token, subtype: .event, tool: tool)
+            messages.append(eventMessage)
+            saveMessages()
+            return
+        }
         if let id = currentStreamingMessageID,
            let index = messages.firstIndex(where: { $0.id == id }) {
             messages[index].text += token
         } else {
-            let newMessage = Message(role: .assistant, text: token)
+            let newMessage = Message(role: .assistant, text: token, subtype: .agent)
             currentStreamingMessageID = newMessage.id
             messages.append(newMessage)
         }

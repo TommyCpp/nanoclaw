@@ -3,12 +3,23 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+// Resolve a command by searching common install locations when not in PATH.
+// launchd services run with a minimal PATH that excludes Homebrew (/opt/homebrew/bin).
+function resolveCmd(cmd: string): string {
+  const extraPaths = ['/opt/homebrew/bin', '/usr/local/bin'];
+  for (const dir of extraPaths) {
+    const full = path.join(dir, cmd);
+    if (fs.existsSync(full)) return full;
+  }
+  return cmd;
+}
+
 function execFile(
   cmd: string,
   args: string[],
 ): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    execFileCb(cmd, args, (err, stdout, stderr) => {
+    execFileCb(resolveCmd(cmd), args, (err, stdout, stderr) => {
       if (err) reject(err);
       else resolve({ stdout: String(stdout), stderr: String(stderr) });
     });
