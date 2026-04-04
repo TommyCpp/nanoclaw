@@ -490,7 +490,10 @@ export async function processTaskIpc(
             targetJid,
           );
           if (result.ok) {
-            await deps.sendMessage(targetJid, result.url);
+            await deps.sendMessage(
+              targetJid,
+              `CC: ${data.directory}\n${result.url}`,
+            );
           } else {
             await deps.sendMessage(
               targetJid,

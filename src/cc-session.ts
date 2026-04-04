@@ -20,10 +20,20 @@ const sessions = new Map<string, CcSession>();
 const TMUX_BIN = '/opt/homebrew/bin/tmux';
 const CLAUDE_BIN = '/Users/zhongyang/.local/bin/claude';
 
+// Match session-level URLs (from /remote-control handoff)
+const SESSION_URL_REGEX = /https:\/\/claude\.ai\/code\/session_\S+/;
+// Fallback: match environment-level URLs
+const ENV_URL_REGEX = /https:\/\/claude\.ai\/code\?environment=\S+/;
+// Combined: prefer session URL, fall back to environment URL
 const URL_REGEX = /https:\/\/claude\.ai\/code\S+/;
+
+const CLAUDE_READY_TIMEOUT_MS = 30_000;
 const URL_TIMEOUT_MS = 30_000;
-const URL_POLL_MS = 200;
+const POLL_MS = 300;
 const STATE_FILE = path.join(DATA_DIR, 'cc-sessions.json');
+
+// Pattern that indicates claude interactive session is ready for input
+const READY_PATTERN = /^❯\s*$/m;
 
 function saveState(): void {
   fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
@@ -113,7 +123,7 @@ export async function startCcSession(
   // Check for existing session
   const existing = sessions.get(resolved);
   if (existing && tmuxHasSession(existing.tmuxSession)) {
-    // Tmux session alive — reconnect by restarting remote-control in it
+    // Tmux session alive — reconnect by sending /remote-control again
     return reconnectCcSession(existing.tmuxSession, resolved!, sender, chatJid);
   }
   // Clean up dead session
@@ -129,7 +139,7 @@ export async function startCcSession(
     tmuxName = `${tmuxName}-${hash}`;
   }
 
-  // Start tmux session with claude remote-control
+  // Step 1: Start interactive claude session in tmux
   try {
     execFileSync(
       TMUX_BIN,
@@ -146,13 +156,11 @@ export async function startCcSession(
         '50',
         '--',
         CLAUDE_BIN,
-        'remote-control',
-        '--name',
-        `CC: ${path.basename(resolved)}`,
         '--permission-mode',
         'bypassPermissions',
-        '--spawn',
-        'same-dir',
+        '--dangerously-skip-permissions',
+        '--name',
+        `CC: ${path.basename(resolved)}`,
       ],
       { stdio: 'ignore', timeout: 10_000 },
     );
@@ -160,12 +168,81 @@ export async function startCcSession(
     return { ok: false, error: `Failed to start tmux session: ${err.message}` };
   }
 
+  // Step 2: Wait for claude to be ready, then send /remote-control
+  const readyResult = await waitForReady(tmuxName);
+  if (!readyResult.ok) {
+    try {
+      execFileSync(TMUX_BIN, ['kill-session', '-t', tmuxName], {
+        stdio: 'ignore',
+      });
+    } catch {
+      /* already dead */
+    }
+    return readyResult;
+  }
+
+  // Step 3: Send /remote-control to hand off the session
+  try {
+    execFileSync(
+      TMUX_BIN,
+      ['send-keys', '-t', tmuxName, '/remote-control', 'Enter'],
+      { stdio: 'ignore', timeout: 5000 },
+    );
+  } catch (err: any) {
+    return {
+      ok: false,
+      error: `Failed to send /remote-control: ${err.message}`,
+    };
+  }
+
+  logger.info(
+    { tmuxName, directory: resolved },
+    'CC session started, waiting for remote-control URL',
+  );
+
+  // Step 4: Poll for the session URL
   return pollForUrl(tmuxName, resolved!, sender, chatJid, true);
 }
 
 /**
- * Restart claude remote-control inside an existing tmux session and wait for new URL.
- * Uses a marker line to distinguish the new URL from any old URL still in scrollback.
+ * Wait for the claude interactive session to be ready (showing the ❯ prompt).
+ */
+function waitForReady(
+  tmuxName: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+
+    const poll = () => {
+      if (!tmuxHasSession(tmuxName)) {
+        resolve({ ok: false, error: 'Claude session exited before ready' });
+        return;
+      }
+
+      const content = tmuxCapture(tmuxName);
+      if (READY_PATTERN.test(content)) {
+        resolve({ ok: true });
+        return;
+      }
+
+      if (Date.now() - startTime >= CLAUDE_READY_TIMEOUT_MS) {
+        resolve({
+          ok: false,
+          error: 'Timed out waiting for Claude session to be ready',
+        });
+        return;
+      }
+
+      setTimeout(poll, POLL_MS);
+    };
+
+    poll();
+  });
+}
+
+/**
+ * Reconnect: send /remote-control in an existing tmux session to get a fresh URL.
+ * Uses a marker to distinguish new URL from old scrollback.
  */
 async function reconnectCcSession(
   tmuxName: string,
@@ -174,23 +251,41 @@ async function reconnectCcSession(
   chatJid: string,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const marker = `__CC_RECONNECT_${Date.now()}__`;
+
+  // Check if remote-control is already active by looking for existing session URL
+  const content = tmuxCapture(tmuxName);
+  const existingMatch = content.match(SESSION_URL_REGEX);
+  if (existingMatch && content.includes('Remote Control active')) {
+    // Already active — return existing URL
+    const session: CcSession = {
+      directory: resolved,
+      tmuxSession: tmuxName,
+      url: existingMatch[0],
+      startedBy: sender,
+      chatJid,
+      startedAt: new Date().toISOString(),
+    };
+    sessions.set(resolved, session);
+    saveState();
+    return { ok: true, url: existingMatch[0] };
+  }
+
   try {
-    // Print marker then run remote-control — marker lets us ignore scrollback above it
+    // Send Escape first to ensure we're at the prompt, then /remote-control
+    execFileSync(TMUX_BIN, ['send-keys', '-t', tmuxName, 'Escape', ''], {
+      stdio: 'ignore',
+      timeout: 5000,
+    });
+    // Small delay then send command
     execFileSync(
       TMUX_BIN,
-      [
-        'send-keys',
-        '-t',
-        tmuxName,
-        `echo ${marker} && ${CLAUDE_BIN} remote-control --name "CC: ${path.basename(resolved)}" --permission-mode bypassPermissions --spawn same-dir`,
-        'Enter',
-      ],
+      ['send-keys', '-t', tmuxName, '/remote-control', 'Enter'],
       { stdio: 'ignore', timeout: 5000 },
     );
   } catch (err: any) {
     return {
       ok: false,
-      error: `Failed to reconnect tmux session: ${err.message}`,
+      error: `Failed to reconnect session: ${err.message}`,
     };
   }
 
@@ -200,6 +295,7 @@ async function reconnectCcSession(
 
 /**
  * Poll tmux pane for a claude.ai/code URL.
+ * Prefers session-level URLs (from /remote-control handoff).
  * If marker is given, only match URLs that appear after the marker line.
  */
 function pollForUrl(
@@ -226,7 +322,10 @@ function pollForUrl(
       const searchIn = marker
         ? content.slice(content.indexOf(marker) + marker.length)
         : content;
-      const match = searchIn.match(URL_REGEX);
+
+      // Prefer session-level URL, fall back to environment URL
+      const match =
+        searchIn.match(SESSION_URL_REGEX) || searchIn.match(ENV_URL_REGEX);
 
       if (match) {
         const session: CcSession = {
@@ -265,7 +364,7 @@ function pollForUrl(
         return;
       }
 
-      setTimeout(poll, URL_POLL_MS);
+      setTimeout(poll, POLL_MS);
     };
 
     poll();
