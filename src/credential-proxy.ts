@@ -118,6 +118,80 @@ export function startCredentialProxy(
   });
 }
 
+export function startGeminiCredentialProxy(
+  port: number,
+  host = '127.0.0.1',
+): Promise<Server> {
+  const secrets = readEnvFile(['GEMINI_API_KEY', 'GEMINI_BASE_URL']);
+
+  const upstreamUrl = new URL(
+    secrets.GEMINI_BASE_URL ||
+      'https://generativelanguage.googleapis.com',
+  );
+  const isHttps = upstreamUrl.protocol === 'https:';
+  const makeReq = isHttps ? httpsRequest : httpRequest;
+
+  return new Promise((resolve, reject) => {
+    const server = createServer((req, res) => {
+      const chunks: Buffer[] = [];
+      req.on('data', (c) => chunks.push(c));
+      req.on('end', () => {
+        const body = Buffer.concat(chunks);
+        const headers: Record<string, string | number | string[] | undefined> =
+          {
+            ...(req.headers as Record<string, string>),
+            host: upstreamUrl.host,
+            'content-length': body.length,
+          };
+
+        // Strip hop-by-hop headers
+        delete headers['connection'];
+        delete headers['keep-alive'];
+        delete headers['transfer-encoding'];
+
+        // Inject real Gemini API key
+        delete headers['x-goog-api-key'];
+        headers['x-goog-api-key'] = secrets.GEMINI_API_KEY;
+
+        const upstream = makeReq(
+          {
+            hostname: upstreamUrl.hostname,
+            port: upstreamUrl.port || (isHttps ? 443 : 80),
+            path: req.url,
+            method: req.method,
+            headers,
+          } as RequestOptions,
+          (upRes) => {
+            res.writeHead(upRes.statusCode!, upRes.headers);
+            upRes.pipe(res);
+          },
+        );
+
+        upstream.on('error', (err) => {
+          logger.error(
+            { err, url: req.url },
+            'Gemini credential proxy upstream error',
+          );
+          if (!res.headersSent) {
+            res.writeHead(502);
+            res.end('Bad Gateway');
+          }
+        });
+
+        upstream.write(body);
+        upstream.end();
+      });
+    });
+
+    server.listen(port, host, () => {
+      logger.info({ port, host }, 'Gemini credential proxy started');
+      resolve(server);
+    });
+
+    server.on('error', reject);
+  });
+}
+
 /** Detect which auth mode the host is configured for. */
 export function detectAuthMode(): AuthMode {
   const secrets = readEnvFile(['ANTHROPIC_API_KEY']);

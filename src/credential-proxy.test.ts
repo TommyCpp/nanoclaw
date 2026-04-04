@@ -11,7 +11,10 @@ vi.mock('./logger.js', () => ({
   logger: { info: vi.fn(), error: vi.fn(), debug: vi.fn(), warn: vi.fn() },
 }));
 
-import { startCredentialProxy } from './credential-proxy.js';
+import {
+  startCredentialProxy,
+  startGeminiCredentialProxy,
+} from './credential-proxy.js';
 
 function makeRequest(
   port: number,
@@ -181,6 +184,105 @@ describe('credential-proxy', () => {
       {
         method: 'POST',
         path: '/v1/messages',
+        headers: { 'content-type': 'application/json' },
+      },
+      '{}',
+    );
+
+    expect(res.statusCode).toBe(502);
+    expect(res.body).toBe('Bad Gateway');
+  });
+});
+
+describe('gemini-credential-proxy', () => {
+  let proxyServer: http.Server;
+  let upstreamServer: http.Server;
+  let proxyPort: number;
+  let upstreamPort: number;
+  let lastUpstreamHeaders: http.IncomingHttpHeaders;
+
+  beforeEach(async () => {
+    lastUpstreamHeaders = {};
+
+    upstreamServer = http.createServer((req, res) => {
+      lastUpstreamHeaders = { ...req.headers };
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+    });
+    await new Promise<void>((resolve) =>
+      upstreamServer.listen(0, '127.0.0.1', resolve),
+    );
+    upstreamPort = (upstreamServer.address() as AddressInfo).port;
+  });
+
+  afterEach(async () => {
+    await new Promise<void>((r) => proxyServer?.close(() => r()));
+    await new Promise<void>((r) => upstreamServer?.close(() => r()));
+    for (const key of Object.keys(mockEnv)) delete mockEnv[key];
+  });
+
+  async function startProxy(env: Record<string, string>): Promise<number> {
+    Object.assign(mockEnv, env, {
+      GEMINI_BASE_URL: `http://127.0.0.1:${upstreamPort}`,
+    });
+    proxyServer = await startGeminiCredentialProxy(0);
+    return (proxyServer.address() as AddressInfo).port;
+  }
+
+  it('injects x-goog-api-key and strips placeholder', async () => {
+    proxyPort = await startProxy({ GEMINI_API_KEY: 'gemini-real-key' });
+
+    await makeRequest(
+      proxyPort,
+      {
+        method: 'POST',
+        path: '/v1beta/models/gemini-2.5-pro:generateContent',
+        headers: {
+          'content-type': 'application/json',
+          'x-goog-api-key': 'placeholder',
+        },
+      },
+      '{}',
+    );
+
+    expect(lastUpstreamHeaders['x-goog-api-key']).toBe('gemini-real-key');
+  });
+
+  it('strips hop-by-hop headers', async () => {
+    proxyPort = await startProxy({ GEMINI_API_KEY: 'gemini-real-key' });
+
+    await makeRequest(
+      proxyPort,
+      {
+        method: 'POST',
+        path: '/v1beta/models/gemini-2.5-pro:generateContent',
+        headers: {
+          'content-type': 'application/json',
+          connection: 'keep-alive',
+          'keep-alive': 'timeout=5',
+          'transfer-encoding': 'chunked',
+        },
+      },
+      '{}',
+    );
+
+    expect(lastUpstreamHeaders['keep-alive']).toBeUndefined();
+    expect(lastUpstreamHeaders['transfer-encoding']).toBeUndefined();
+  });
+
+  it('returns 502 when upstream is unreachable', async () => {
+    Object.assign(mockEnv, {
+      GEMINI_API_KEY: 'gemini-real-key',
+      GEMINI_BASE_URL: 'http://127.0.0.1:59999',
+    });
+    proxyServer = await startGeminiCredentialProxy(0);
+    proxyPort = (proxyServer.address() as AddressInfo).port;
+
+    const res = await makeRequest(
+      proxyPort,
+      {
+        method: 'POST',
+        path: '/v1beta/models/gemini-2.5-pro:generateContent',
         headers: { 'content-type': 'application/json' },
       },
       '{}',

@@ -5,12 +5,17 @@ import {
   ASSISTANT_NAME,
   CC_SESSION_BASE,
   CREDENTIAL_PROXY_PORT,
+  GEMINI_CREDENTIAL_PROXY_PORT,
   IDLE_TIMEOUT,
   POLL_INTERVAL,
   TIMEZONE,
   TRIGGER_PATTERN,
 } from './config.js';
-import { startCredentialProxy } from './credential-proxy.js';
+import {
+  startCredentialProxy,
+  startGeminiCredentialProxy,
+} from './credential-proxy.js';
+import { readEnvFile } from './env.js';
 import './channels/index.js';
 import {
   getChannelFactory,
@@ -491,10 +496,21 @@ async function main(): Promise<void> {
     PROXY_BIND_HOST,
   );
 
+  // Start Gemini credential proxy if GEMINI_API_KEY is configured
+  const geminiEnv = readEnvFile(['GEMINI_API_KEY']);
+  let geminiProxyServer: import('http').Server | undefined;
+  if (geminiEnv.GEMINI_API_KEY) {
+    geminiProxyServer = await startGeminiCredentialProxy(
+      GEMINI_CREDENTIAL_PROXY_PORT,
+      PROXY_BIND_HOST,
+    );
+  }
+
   // Graceful shutdown handlers
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'Shutdown signal received');
     proxyServer.close();
+    geminiProxyServer?.close();
     await queue.shutdown(10000);
     for (const ch of channels) await ch.disconnect();
     process.exit(0);
