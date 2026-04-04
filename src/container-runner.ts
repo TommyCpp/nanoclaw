@@ -261,22 +261,27 @@ function buildContainerArgs(
     args.push('-e', 'CLAUDE_CODE_OAUTH_TOKEN=placeholder');
   }
 
-  // Pass SDK backend selection for container agents
-  const nanoclavSdk = process.env.NANOCLAW_SDK;
+  // Pass SDK backend and Gemini config into containers
+  const geminiEnv = readEnvFile([
+    'NANOCLAW_SDK',
+    'GEMINI_API_KEY',
+    'GEMINI_MODEL',
+  ]);
+
+  const nanoclavSdk = process.env.NANOCLAW_SDK || geminiEnv.NANOCLAW_SDK;
   if (nanoclavSdk) {
     args.push('-e', `NANOCLAW_SDK=${nanoclavSdk}`);
   }
 
-  // Pass Gemini config — API key is a placeholder, real key injected by proxy
-  const geminiApiKey = readEnvFile(['GEMINI_API_KEY']).GEMINI_API_KEY;
-  if (geminiApiKey) {
+  // Gemini API key is a placeholder — real key injected by credential proxy
+  if (geminiEnv.GEMINI_API_KEY) {
     args.push('-e', 'GEMINI_API_KEY=placeholder');
     args.push(
       '-e',
       `GEMINI_BASE_URL=http://${CONTAINER_HOST_GATEWAY}:${GEMINI_CREDENTIAL_PROXY_PORT}`,
     );
   }
-  const geminiModel = process.env.GEMINI_MODEL;
+  const geminiModel = process.env.GEMINI_MODEL || geminiEnv.GEMINI_MODEL;
   if (geminiModel) {
     args.push('-e', `GEMINI_MODEL=${geminiModel}`);
   }
