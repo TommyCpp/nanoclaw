@@ -12,6 +12,7 @@ import {
   CONTAINER_TIMEOUT,
   CREDENTIAL_PROXY_PORT,
   DATA_DIR,
+  GEMINI_CREDENTIAL_PROXY_PORT,
   GROUPS_DIR,
   IDLE_TIMEOUT,
   TIMEZONE,
@@ -26,6 +27,7 @@ import {
   stopContainer,
 } from './container-runtime.js';
 import { detectAuthMode } from './credential-proxy.js';
+import { readEnvFile } from './env.js';
 import { validateAdditionalMounts } from './mount-security.js';
 import { RegisteredGroup } from './types.js';
 
@@ -257,6 +259,26 @@ function buildContainerArgs(
     args.push('-e', 'ANTHROPIC_API_KEY=placeholder');
   } else {
     args.push('-e', 'CLAUDE_CODE_OAUTH_TOKEN=placeholder');
+  }
+
+  // Pass SDK backend selection for container agents
+  const nanoclavSdk = process.env.NANOCLAW_SDK;
+  if (nanoclavSdk) {
+    args.push('-e', `NANOCLAW_SDK=${nanoclavSdk}`);
+  }
+
+  // Pass Gemini config — API key is a placeholder, real key injected by proxy
+  const geminiApiKey = readEnvFile(['GEMINI_API_KEY']).GEMINI_API_KEY;
+  if (geminiApiKey) {
+    args.push('-e', 'GEMINI_API_KEY=placeholder');
+    args.push(
+      '-e',
+      `GEMINI_BASE_URL=http://${CONTAINER_HOST_GATEWAY}:${GEMINI_CREDENTIAL_PROXY_PORT}`,
+    );
+  }
+  const geminiModel = process.env.GEMINI_MODEL;
+  if (geminiModel) {
+    args.push('-e', `GEMINI_MODEL=${geminiModel}`);
   }
 
   // Runtime-specific args for host gateway resolution
