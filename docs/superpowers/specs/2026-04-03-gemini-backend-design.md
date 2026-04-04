@@ -22,7 +22,7 @@ Adapter that wraps `@google/genai` to match the agent-runner's query interface.
 
 **Key components:**
 
-1. **GoogleGenAI client** — singleton, initialized with `GEMINI_API_KEY`
+1. **GoogleGenAI client** — singleton, initialized with placeholder API key + `httpOptions.baseUrl` pointing at the credential proxy
 2. **MCP integration** — `StdioClientTransport` + `Client` from `@modelcontextprotocol/sdk` to connect to the NanoClaw MCP server, then `mcpToTool()` from `@google/genai` to convert MCP tools into Gemini-compatible tool declarations
 3. **Agentic tool loop** — since there's no high-level `query()`, we implement:
    - Send prompt via `chat.sendMessageStream()`
@@ -44,8 +44,21 @@ Adapter that wraps `@google/genai` to match the agent-runner's query interface.
 - Add `@google/genai` dependency
 
 **`src/container-runner.ts`:**
-- Pass `GEMINI_API_KEY` and `GEMINI_MODEL` env vars into containers
-- No credential proxy needed — Gemini uses its own API key directly, not the Anthropic proxy
+- Pass `NANOCLAW_SDK`, `GEMINI_MODEL` env vars into containers
+- Pass `GEMINI_BASE_URL=http://<host-gateway>:<GEMINI_PROXY_PORT>` so the container's `@google/genai` client routes through the credential proxy
+- Pass `GEMINI_API_KEY=placeholder` — the proxy replaces it with the real key
+
+**`src/credential-proxy.ts`:**
+- New `startGeminiCredentialProxy(port)` function — a second proxy instance on a dedicated port (e.g. 3002)
+- Reads `GEMINI_API_KEY` from `.env`
+- Injects the real API key as a `x-goog-api-key` header (Gemini REST API auth) on every request
+- Upstream: `https://generativelanguage.googleapis.com`
+
+**`src/config.ts`:**
+- Add `GEMINI_CREDENTIAL_PROXY_PORT` constant (default 3002)
+
+**`src/index.ts`:**
+- Start the Gemini credential proxy alongside the existing Anthropic one (only when `NANOCLAW_SDK=gemini` or `GEMINI_API_KEY` is set)
 
 ### Configuration
 
@@ -102,9 +115,19 @@ This gives us cross-query session continuity within the container's IPC message 
 
 The global `CLAUDE.md` content (loaded from `/workspace/global/CLAUDE.md`) is passed as the `systemInstruction` parameter when creating the Gemini model instance.
 
+## Credential Proxy (Gemini)
+
+Dedicated proxy on port 3002, same pattern as the Anthropic proxy on port 3001.
+
+- Container sets `httpOptions.baseUrl` to `http://host-gateway:3002` and `apiKey` to `"placeholder"`
+- Proxy reads real `GEMINI_API_KEY` from `.env`
+- On every request: strips any existing `x-goog-api-key` header, injects real key, forwards to `https://generativelanguage.googleapis.com`
+- Streaming responses are piped through unchanged
+
+This keeps the real API key out of containers entirely.
+
 ## What This Does NOT Include
 
-- No credential proxy changes (Gemini uses direct API key, not the Anthropic proxy)
 - No pre-compact hook (Gemini doesn't have the same compaction model — we can add conversation archiving separately if needed)
 - No agent teams support (Gemini doesn't have an equivalent — single agent only)
 
