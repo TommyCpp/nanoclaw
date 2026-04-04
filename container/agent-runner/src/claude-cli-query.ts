@@ -116,8 +116,8 @@ function buildClaudeArgs(
     'mcp__nanoclaw__*',
   );
 
-  // The prompt itself
-  args.push(prompt);
+  // The prompt — use -p flag explicitly
+  args.push('-p', prompt);
 
   return args;
 }
@@ -138,12 +138,17 @@ export async function runClaudeCliQuery(
   drainIpcInput: DrainIpcFn,
   ipcPollMs: number,
 ): Promise<ClaudeCliQueryResult> {
+  // Ensure .claude.json exists (CLI requires it)
+  const claudeJsonPath = path.join(process.env.HOME || '/home/node', '.claude.json');
+  if (!fs.existsSync(claudeJsonPath)) {
+    fs.writeFileSync(claudeJsonPath, '{}');
+  }
+
   const args = buildClaudeArgs(prompt, sessionId, mcpServerPath, containerInput);
   const model = process.env.CLAUDE_CLI_MODEL;
 
   if (model) {
-    // Insert --model before the prompt (last arg)
-    args.splice(args.length - 1, 0, '--model', model);
+    args.push('--model', model);
   }
 
   log(`Claude CLI query (session: ${sessionId || 'new'}, model: ${model || 'default'})`);
@@ -161,7 +166,7 @@ export async function runClaudeCliQuery(
         // Ensure claude CLI doesn't try interactive prompts
         CI: '1',
       },
-      stdio: ['pipe', 'pipe', 'pipe'],
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
 
     // IPC polling during query
