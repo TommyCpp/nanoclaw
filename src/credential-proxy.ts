@@ -125,8 +125,7 @@ export function startGeminiCredentialProxy(
   const secrets = readEnvFile(['GEMINI_API_KEY', 'GEMINI_BASE_URL']);
 
   const upstreamUrl = new URL(
-    secrets.GEMINI_BASE_URL ||
-      'https://generativelanguage.googleapis.com',
+    secrets.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com',
   );
   const isHttps = upstreamUrl.protocol === 'https:';
   const makeReq = isHttps ? httpsRequest : httpRequest;

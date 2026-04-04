@@ -151,8 +151,8 @@ export async function runGeminiQuery(
     ...(baseUrl ? { httpOptions: { baseUrl } } : {}),
   });
 
-  // Convert MCP tools to Gemini-compatible callable tools
-  const tools = [mcpToTool(mcp)];
+  // Convert MCP tools to Gemini-compatible callable tools + enable Google Search
+  const tools = [mcpToTool(mcp), { googleSearch: {} }];
 
   // Load system instruction from global CLAUDE.md
   const globalClaudeMdPath = '/workspace/global/CLAUDE.md';
