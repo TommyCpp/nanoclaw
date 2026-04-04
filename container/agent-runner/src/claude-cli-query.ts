@@ -77,7 +77,7 @@ function buildClaudeArgs(
     args.push('--resume', sessionId);
   }
 
-  // MCP server config as JSON
+  // MCP server config — write to temp file since CLI expects a file path
   const mcpConfig = {
     mcpServers: {
       nanoclaw: {
@@ -91,7 +91,9 @@ function buildClaudeArgs(
       },
     },
   };
-  args.push('--mcp-config', JSON.stringify(mcpConfig));
+  const mcpConfigPath = '/tmp/nanoclaw-mcp-config.json';
+  fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig));
+  args.push('--mcp-config', mcpConfigPath);
 
   // Working directory
   args.push('--add-dir', '/workspace/group');
