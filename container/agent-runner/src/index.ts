@@ -19,6 +19,7 @@ import path from 'path';
 import { query, HookCallback, PreCompactHookInput } from '@anthropic-ai/claude-agent-sdk';
 import { fileURLToPath } from 'url';
 import { runGeminiQuery, stopGeminiClient } from './gemini-query.js';
+import { runClaudeCliQuery, stopClaudeCliClient } from './claude-cli-query.js';
 
 interface ContainerInput {
   prompt: string;
@@ -61,7 +62,7 @@ const IPC_POLL_MS = 500;
 
 /**
  * Which SDK to use for agent queries.
- * Set via NANOCLAW_SDK env var: 'claude' (default) or 'gemini'.
+ * Set via NANOCLAW_SDK env var: 'claude' (default), 'claude-cli', or 'gemini'.
  */
 const SDK_BACKEND = (process.env.NANOCLAW_SDK || 'claude').toLowerCase();
 
@@ -526,6 +527,11 @@ async function main(): Promise<void> {
           prompt, sessionId, mcpServerPath, containerInput, sdkEnv,
           writeOutput, log, shouldClose, drainIpcInput, IPC_POLL_MS,
         );
+      } else if (SDK_BACKEND === 'claude-cli') {
+        queryResult = await runClaudeCliQuery(
+          prompt, sessionId, mcpServerPath, containerInput, sdkEnv,
+          writeOutput, log, shouldClose, drainIpcInput, IPC_POLL_MS,
+        );
       } else {
         queryResult = await runQuery(prompt, sessionId, mcpServerPath, containerInput, sdkEnv, resumeAt);
       }
@@ -572,6 +578,8 @@ async function main(): Promise<void> {
   } finally {
     if (SDK_BACKEND === 'gemini') {
       await stopGeminiClient();
+    } else if (SDK_BACKEND === 'claude-cli') {
+      await stopClaudeCliClient();
     }
   }
 }
