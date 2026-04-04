@@ -228,6 +228,7 @@ struct ChatView: View {
             Text(indicatorLabel)
                 .font(.caption2)
                 .foregroundStyle(.gray)
+                .fixedSize()
         }
     }
 
