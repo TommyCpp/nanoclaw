@@ -1,10 +1,49 @@
 # NanoClaw
 
-Personal Claude assistant. See [README.md](README.md) for philosophy and setup. See [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) for architecture decisions.
+Personal AI assistant with pluggable backends. See [README.md](README.md) for philosophy and setup. See [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) for architecture decisions.
 
 ## Quick Context
 
-Single Node.js process with skill-based channel system. Channels (WhatsApp, Telegram, Slack, Discord, Gmail) are skills that self-register at startup. Messages route to Claude Agent SDK running in containers (Linux VMs). Each group has isolated filesystem and memory.
+Single Node.js process with skill-based channel system. Channels (WhatsApp, Telegram, Slack, Discord, Gmail) are skills that self-register at startup. Messages route to an AI backend running in containers (Linux VMs). Each group has isolated filesystem and memory.
+
+## AI Backends
+
+Set `NANOCLAW_SDK` in `.env` to select the backend. Rebuild container after changing (`./container/build.sh`).
+
+| Backend | `NANOCLAW_SDK` | Auth | Tools | Cost |
+|---------|---------------|------|-------|------|
+| Claude SDK | `claude` (default) | `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` | Full Claude Code (Bash, files, browser, web search, MCP) | API credits |
+| Claude CLI | `claude-cli` | Claude Code subscription (mounted `~/.claude/`) | Full Claude Code (same as SDK) | Subscription (no API cost) |
+| Gemini | `gemini` | `GEMINI_API_KEY` | MCP tools + Google Search grounding | Gemini API credits |
+
+### Claude SDK (default)
+Uses `@anthropic-ai/claude-agent-sdk` `query()`. Full Claude Code toolset. Credential proxy on port 3001 injects real credentials.
+```bash
+NANOCLAW_SDK=claude
+CLAUDE_CODE_OAUTH_TOKEN=...  # or ANTHROPIC_API_KEY=...
+```
+
+### Claude CLI (WIP)
+Spawns `claude` CLI binary (included in subscription). Same tools as SDK but no API cost. Auth via mounted `~/.claude/` directory.
+```bash
+NANOCLAW_SDK=claude-cli
+```
+
+### Gemini
+Uses `@google/genai` with `mcpToTool()` for MCP + `{ googleSearch: {} }` for web access. Credential proxy on port 3002. No file/bash/browser tools — chat + MCP + search only.
+```bash
+NANOCLAW_SDK=gemini
+GEMINI_API_KEY=AIza...
+GEMINI_MODEL=gemini-2.5-pro  # optional
+```
+
+### Key files per backend
+| File | Purpose |
+|------|---------|
+| `container/agent-runner/src/index.ts` | SDK dispatch (`SDK_BACKEND` switch) |
+| `container/agent-runner/src/gemini-query.ts` | Gemini adapter (MCP + Google Search + AFC) |
+| `src/credential-proxy.ts` | Anthropic proxy (3001) + Gemini proxy (3002) |
+| `src/container-runner.ts` | Passes backend env vars into containers |
 
 ## Key Files
 
