@@ -89,7 +89,8 @@ export async function runIssueCommand(
   allowlistPath?: string,
 ): Promise<{ ok: boolean; message: string }> {
   const allowlist = readAllowlist(allowlistPath);
-  if (!allowlist.includes(data.repo)) {
+  const repoLower = data.repo.toLowerCase();
+  if (!allowlist.some((r) => r.toLowerCase() === repoLower)) {
     return {
       ok: false,
       message: `Repo ${data.repo} is not in the allowlist. Add it to config/allowed-repos.json.`,

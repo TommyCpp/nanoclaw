@@ -4,7 +4,12 @@ import { setRegisteredGroup } from '../db.js';
 import { readEnvFile } from '../env.js';
 import { logger } from '../logger.js';
 import { registerChannel, ChannelOpts } from './registry.js';
-import { Channel, OnChatMetadata, OnInboundMessage } from '../types.js';
+import {
+  Channel,
+  OnChatMetadata,
+  OnInboundMessage,
+  RegisteredGroup,
+} from '../types.js';
 
 const TEST_JID = 'test:local';
 const TEST_FOLDER = 'test-local';
@@ -12,6 +17,7 @@ const TEST_FOLDER = 'test-local';
 interface TestChannelOpts {
   onMessage: OnInboundMessage;
   onChatMetadata: OnChatMetadata;
+  registeredGroups: () => Record<string, RegisteredGroup>;
   clearSession?: (folder: string) => void;
   port: number;
 }
@@ -45,13 +51,21 @@ export class TestChannel implements Channel {
   }
 
   private ensureGroupRegistered(): void {
-    setRegisteredGroup(TEST_JID, {
+    const groups = this.opts.registeredGroups();
+    if (groups[TEST_JID]) return;
+
+    const group: RegisteredGroup = {
       name: 'Test',
       folder: TEST_FOLDER,
       trigger: '@test',
       added_at: new Date().toISOString(),
       requiresTrigger: false,
-    });
+      isMain: true,
+    };
+
+    setRegisteredGroup(TEST_JID, group);
+    groups[TEST_JID] = group;
+    logger.info({ jid: TEST_JID }, 'Test channel: registered test:local group');
   }
 
   private handleRequest(req: IncomingMessage, res: ServerResponse): void {
@@ -160,6 +174,7 @@ registerChannel('test', (opts: ChannelOpts) => {
   return new TestChannel({
     onMessage: opts.onMessage,
     onChatMetadata: opts.onChatMetadata,
+    registeredGroups: opts.registeredGroups,
     clearSession: opts.clearSession,
     port,
   });
