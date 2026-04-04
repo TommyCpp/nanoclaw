@@ -69,7 +69,7 @@ function buildClaudeArgs(
     '--print',
     '--output-format', 'json',
     '--dangerously-skip-permissions',
-    '--bare',
+    '--setting-sources', 'project,user',
   ];
 
   // Resume existing session
