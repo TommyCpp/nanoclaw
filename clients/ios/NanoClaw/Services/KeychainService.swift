@@ -24,6 +24,12 @@ enum KeychainService {
     }
 
     static func loadToken() -> String? {
+        #if targetEnvironment(simulator)
+        if let override = UserDefaults.standard.string(forKey: "auth_token_override"), !override.isEmpty {
+            return override
+        }
+        #endif
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,

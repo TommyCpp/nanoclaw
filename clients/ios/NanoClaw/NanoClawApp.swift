@@ -8,32 +8,32 @@ struct NanoClawApp: App {
 
     var body: some Scene {
         WindowGroup {
-            NavigationStack {
-                TabView {
+            TabView {
+                NavigationStack {
                     ChannelListView()
                         .navigationDestination(for: String.self) { chatId in
                             ChatView(chatId: chatId)
                         }
-                        .tabItem {
-                            Label("Channels", systemImage: "bubble.left.and.bubble.right")
-                        }
-                    JobsView()
-                        .tabItem {
-                            Label("Jobs", systemImage: "clock")
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button {
+                                    showSettings = true
+                                } label: {
+                                    Image(systemName: "gearshape")
+                                        .foregroundStyle(.gray)
+                                }
+                            }
                         }
                 }
-                .tint(.purple)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            showSettings = true
-                        } label: {
-                            Image(systemName: "gearshape")
-                                .foregroundStyle(.gray)
-                        }
+                .tabItem {
+                    Label("Channels", systemImage: "bubble.left.and.bubble.right")
+                }
+                JobsView()
+                    .tabItem {
+                        Label("Jobs", systemImage: "clock")
                     }
-                }
             }
+            .tint(.purple)
             .sheet(isPresented: $showSettings) {
                 SettingsView()
                     .environmentObject(webSocketService)
