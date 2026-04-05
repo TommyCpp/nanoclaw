@@ -8,6 +8,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { ASSISTANT_NAME, TRIGGER_PATTERN } from '../config.js';
 import { setRegisteredGroup, getAllTasks } from '../db.js';
 import { readEnvFile } from '../env.js';
+import { isValidGroupFolder } from '../group-folder.js';
 import { logger } from '../logger.js';
 import { registerChannel, ChannelOpts } from './registry.js';
 import {
@@ -17,9 +18,15 @@ import {
   RegisteredGroup,
 } from '../types.js';
 
-/** Single persistent group — all iOS conversations share one history + memory */
-const IOS_JID = 'ios:main';
-const IOS_FOLDER = 'ios-main';
+const DEFAULT_CHAT_ID = 'main';
+
+function iosJid(chatId: string): string {
+  return `ios:${chatId}`;
+}
+
+function iosFolder(chatId: string): string {
+  return `ios-${chatId}`;
+}
 
 interface IosChannelOpts {
   onMessage: OnInboundMessage;
@@ -36,7 +43,7 @@ export class IosChannel implements Channel {
   private wss: WebSocketServer | null = null;
   private clients = new Set<WebSocket>();
   /** Messages buffered while no client is connected */
-  private pendingMessages: string[] = [];
+  private pendingMessages = new Map<string, string[]>();
   private connected = false;
 
   constructor(opts: IosChannelOpts) {
@@ -44,7 +51,7 @@ export class IosChannel implements Channel {
   }
 
   async connect(): Promise<void> {
-    this.ensureGroupRegistered();
+    this.ensureChannelRegistered(DEFAULT_CHAT_ID, true);
 
     const tlsCert = join(process.cwd(), 'data', 'tls', 'server.crt');
     const tlsKey = join(process.cwd(), 'data', 'tls', 'server.key');
@@ -83,26 +90,34 @@ export class IosChannel implements Channel {
           if (msg.auth === this.opts.secret) {
             authenticated = true;
             this.clients.add(ws);
+
+            let totalPending = 0;
+            for (const buf of this.pendingMessages.values()) {
+              totalPending += buf.length;
+            }
+
             ws.send(
               JSON.stringify({
                 type: 'auth_ok',
-                pending: this.pendingMessages.length,
+                pending: totalPending,
               }),
             );
             logger.info(
               { ip: (req.socket as any).remoteAddress },
               'iOS client connected',
             );
-            // Flush any messages that arrived while client was away
-            if (this.pendingMessages.length > 0) {
+            // Flush pending messages from all channels
+            if (totalPending > 0) {
               logger.info(
-                { count: this.pendingMessages.length },
+                { count: totalPending },
                 'iOS: flushing pending messages',
               );
-              for (const pending of this.pendingMessages) {
-                ws.send(pending);
+              for (const buf of this.pendingMessages.values()) {
+                for (const pending of buf) {
+                  ws.send(pending);
+                }
               }
-              this.pendingMessages = [];
+              this.pendingMessages.clear();
             }
           } else {
             ws.send(JSON.stringify({ type: 'error', message: 'unauthorized' }));
@@ -123,11 +138,69 @@ export class IosChannel implements Channel {
           return;
         }
 
+        // Create a new channel
+        if (msg.type === 'create_channel') {
+          const chatId =
+            typeof msg.chatId === 'string' ? msg.chatId.trim() : '';
+          const name =
+            typeof msg.name === 'string' ? msg.name.trim() : chatId;
+          if (!chatId) {
+            ws.send(
+              JSON.stringify({ type: 'error', message: 'chatId required' }),
+            );
+            return;
+          }
+          const folder = iosFolder(chatId);
+          if (!isValidGroupFolder(folder)) {
+            ws.send(
+              JSON.stringify({ type: 'error', message: 'invalid chatId' }),
+            );
+            return;
+          }
+          this.ensureChannelRegistered(chatId, false);
+          ws.send(
+            JSON.stringify({
+              type: 'channel_created',
+              chatId,
+              name,
+              folder,
+            }),
+          );
+          logger.info({ chatId }, 'iOS: channel created');
+          return;
+        }
+
+        // List all iOS channels
+        if (msg.type === 'list_channels') {
+          const groups = this.opts.registeredGroups();
+          const channels = Object.entries(groups)
+            .filter(([jid]) => jid.startsWith('ios:'))
+            .map(([jid, g]) => ({
+              chatId: jid.replace(/^ios:/, ''),
+              name: g.name,
+              folder: g.folder,
+              isMain: g.isMain ?? false,
+            }));
+          ws.send(JSON.stringify({ type: 'channels', channels }));
+          return;
+        }
+
         if (msg.type !== 'message' || typeof msg.text !== 'string') return;
 
+        const chatId =
+          typeof msg.chatId === 'string' && msg.chatId.trim()
+            ? msg.chatId.trim()
+            : DEFAULT_CHAT_ID;
+        const jid = iosJid(chatId);
         const msgId = typeof msg.id === 'string' ? msg.id : randomUUID();
         const content = msg.text.trim();
         if (!content) return;
+
+        // Auto-register channel on first message
+        const groups = this.opts.registeredGroups();
+        if (!groups[jid]) {
+          this.ensureChannelRegistered(chatId, false);
+        }
 
         // Prepend trigger so the message loop picks it up
         const routed = TRIGGER_PATTERN.test(content)
@@ -135,15 +208,15 @@ export class IosChannel implements Channel {
           : `@${ASSISTANT_NAME} ${content}`;
 
         this.opts.onChatMetadata(
-          IOS_JID,
+          jid,
           new Date().toISOString(),
-          'NanoClaw iOS',
+          `iOS ${chatId}`,
           'ios',
           false,
         );
-        this.opts.onMessage(IOS_JID, {
+        this.opts.onMessage(jid, {
           id: msgId,
-          chat_jid: IOS_JID,
+          chat_jid: jid,
           sender: 'ios-user',
           sender_name: 'iOS',
           content: routed,
@@ -151,7 +224,7 @@ export class IosChannel implements Channel {
           is_from_me: false,
         });
 
-        logger.info({ msgId }, 'iOS: inbound message');
+        logger.info({ msgId, chatId }, 'iOS: inbound message');
       });
 
       ws.on('close', () => {
@@ -181,16 +254,19 @@ export class IosChannel implements Channel {
     });
   }
 
-  async sendMessage(_jid: string, text: string): Promise<void> {
-    const token = JSON.stringify({ type: 'token', text });
-    const done = JSON.stringify({ type: 'done' });
+  async sendMessage(jid: string, text: string): Promise<void> {
+    const chatId = jid.replace(/^ios:/, '');
+    const token = JSON.stringify({ type: 'token', text, chatId });
+    const done = JSON.stringify({ type: 'done', chatId });
     const connected = [...this.clients].filter(
       (ws) => ws.readyState === WebSocket.OPEN,
     );
     if (connected.length === 0) {
-      this.pendingMessages.push(token, done);
+      const buf = this.pendingMessages.get(chatId) ?? [];
+      buf.push(token, done);
+      this.pendingMessages.set(chatId, buf);
       logger.info(
-        { buffered: this.pendingMessages.length, length: text.length },
+        { chatId, buffered: buf.length, length: text.length },
         'iOS: no client connected, buffered message',
       );
       return;
@@ -200,13 +276,14 @@ export class IosChannel implements Channel {
       ws.send(done);
     }
     logger.info(
-      { clients: connected.length, length: text.length },
+      { clients: connected.length, chatId, length: text.length },
       'iOS: message sent',
     );
   }
 
-  async setTyping(_jid: string, isTyping: boolean): Promise<void> {
-    const payload = JSON.stringify({ type: 'typing', isTyping });
+  async setTyping(jid: string, isTyping: boolean): Promise<void> {
+    const chatId = jid.replace(/^ios:/, '');
+    const payload = JSON.stringify({ type: 'typing', isTyping, chatId });
     for (const ws of this.clients) {
       if (ws.readyState === WebSocket.OPEN) ws.send(payload);
     }
@@ -229,26 +306,27 @@ export class IosChannel implements Channel {
     logger.info('iOS WebSocket channel disconnected');
   }
 
-  private ensureGroupRegistered(): void {
+  private ensureChannelRegistered(chatId: string, isMain: boolean): void {
+    const jid = iosJid(chatId);
     const groups = this.opts.registeredGroups();
-    if (groups[IOS_JID]) return;
+    if (groups[jid]) return;
 
-    const group = {
-      name: 'NanoClaw iOS',
-      folder: IOS_FOLDER,
+    const folder = iosFolder(chatId);
+    const group: RegisteredGroup = {
+      name: `iOS ${chatId}`,
+      folder,
       trigger: `@${ASSISTANT_NAME}`,
       added_at: new Date().toISOString(),
       requiresTrigger: false,
-      isMain: true,
+      isMain,
     };
 
     try {
-      setRegisteredGroup(IOS_JID, group);
-      // Also update in-memory cache immediately
-      groups[IOS_JID] = group;
-      logger.info({ jid: IOS_JID }, 'iOS: registered ios:main group');
+      setRegisteredGroup(jid, group);
+      groups[jid] = group;
+      logger.info({ jid, folder }, 'iOS: registered channel');
     } catch (err) {
-      logger.error({ err }, 'iOS: failed to register ios:main group');
+      logger.error({ err, jid }, 'iOS: failed to register channel');
     }
   }
 }
