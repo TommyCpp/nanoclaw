@@ -8,7 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		0A7F5934CC17588F2FAEE2F8 /* MessageBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3500A4142303820A339C585D /* MessageBubble.swift */; };
+		148A78F4EEBE6FF8CC3B1289 /* ChannelListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B5254AD8C9163741BB5C2D /* ChannelListView.swift */; };
 		1E13C6ED59FA27288CDDFD9F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B9B8AF286FA3B6691DFF1041 /* Assets.xcassets */; };
+		2219FD4CBCB5FEE474CA7799 /* Channel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4176E4E5E70B5B096554F2BF /* Channel.swift */; };
 		345C1AC2B5EF9A0EFAA54AEC /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 46D211D3B278825BB10DAB6B /* MarkdownUI */; };
 		448B36451402D04924DFB9BB /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82566C52A47F3B8DFBC03B07 /* Message.swift */; };
 		72687683B1C57E6DB52C1DD4 /* NanoClawApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FBA693F8CE1F0FA97953263 /* NanoClawApp.swift */; };
@@ -26,12 +28,14 @@
 		1C928DCF80CA7102C52AEAE1 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		281B75B7EA5EECD3F96A46C3 /* ScheduledTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledTask.swift; sourceTree = "<group>"; };
 		3500A4142303820A339C585D /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
+		4176E4E5E70B5B096554F2BF /* Channel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Channel.swift; sourceTree = "<group>"; };
 		50518898414BFABED003EA6C /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		64CA9F547DE9B248F64FAC73 /* JobsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobsView.swift; sourceTree = "<group>"; };
+		74B5254AD8C9163741BB5C2D /* ChannelListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelListView.swift; sourceTree = "<group>"; };
 		82566C52A47F3B8DFBC03B07 /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		99750EF765017DBC11DB297E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9FBA693F8CE1F0FA97953263 /* NanoClawApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NanoClawApp.swift; sourceTree = "<group>"; };
-		AB70806554C2D54311EC7BBF /* NanoClaw.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NanoClaw.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB70806554C2D54311EC7BBF /* NanoClaw.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NanoClaw.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9B8AF286FA3B6691DFF1041 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C099EBD2121E5D6AE5C3ADDB /* ConnectionConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionConfig.swift; sourceTree = "<group>"; };
 		E60A2B4EF4CA614E78A0813D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -62,6 +66,7 @@
 		83A3760387A1DCF083B130A3 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				4176E4E5E70B5B096554F2BF /* Channel.swift */,
 				C099EBD2121E5D6AE5C3ADDB /* ConnectionConfig.swift */,
 				82566C52A47F3B8DFBC03B07 /* Message.swift */,
 				281B75B7EA5EECD3F96A46C3 /* ScheduledTask.swift */,
@@ -102,6 +107,7 @@
 		FD859077D92C80CAD122DAF3 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				74B5254AD8C9163741BB5C2D /* ChannelListView.swift */,
 				1C928DCF80CA7102C52AEAE1 /* ChatView.swift */,
 				64CA9F547DE9B248F64FAC73 /* JobsView.swift */,
 				3500A4142303820A339C585D /* MessageBubble.swift */,
@@ -144,6 +150,7 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					39EB4E3D25D09ACF59A62C97 = {
+						DevelopmentTeam = GUR74KTQWM;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -186,6 +193,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2219FD4CBCB5FEE474CA7799 /* Channel.swift in Sources */,
+				148A78F4EEBE6FF8CC3B1289 /* ChannelListView.swift in Sources */,
 				79F08A97C05DA64528E5AB78 /* ChatView.swift in Sources */,
 				FF9700B27931A2A9814A3AF7 /* ConnectionConfig.swift in Sources */,
 				C5F2114553A21D0DEE34AEAE /* JobsView.swift in Sources */,
@@ -266,7 +275,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8HU2W469PT;
+				DEVELOPMENT_TEAM = GUR74KTQWM;
 				INFOPLIST_FILE = NanoClaw/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -351,7 +360,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8HU2W469PT;
+				DEVELOPMENT_TEAM = GUR74KTQWM;
 				INFOPLIST_FILE = NanoClaw/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (

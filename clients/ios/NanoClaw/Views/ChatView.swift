@@ -2,54 +2,47 @@ import SwiftUI
 
 struct ChatView: View {
     @EnvironmentObject private var webSocket: WebSocketService
+    let chatId: String
     @State private var inputText = ""
-    @State private var showSettings = false
     @State private var isAtBottom = false
     @FocusState private var inputFocused: Bool
 
     private let bgColor = Color(hex: 0x111111)
 
+    private var channelMessages: [Message] {
+        webSocket.channelMessages[chatId] ?? []
+    }
+
+    private var channelName: String {
+        webSocket.channels.first(where: { $0.chatId == chatId })?.name ?? chatId
+    }
+
     var body: some View {
-        NavigationStack {
-            ZStack(alignment: .bottom) {
-                VStack(spacing: 0) {
-                    messageList
-                    quickActionBar
-                    inputBar
-                }
-                if !isAtBottom && !webSocket.messages.isEmpty {
-                    scrollToBottomButton
-                }
+        ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
+                messageList
+                quickActionBar
+                inputBar
             }
-            .background(bgColor)
-            .navigationTitle("NanoClaw")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(bgColor, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    connectionIndicator
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showSettings = true
-                    } label: {
-                        Image(systemName: "gearshape")
-                            .foregroundStyle(.gray)
-                    }
-                }
+            if !isAtBottom && !channelMessages.isEmpty {
+                scrollToBottomButton
             }
-            .sheet(isPresented: $showSettings) {
-                SettingsView()
-                    .environmentObject(webSocket)
+        }
+        .background(bgColor)
+        .navigationTitle(channelName)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(bgColor, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                connectionIndicator
             }
-            .onAppear {
-                if KeychainService.loadToken() == nil {
-                    showSettings = true
-                } else {
-                    webSocket.connect()
-                }
-            }
+        }
+        .onAppear {
+            webSocket.switchChannel(chatId)
+        }
+        .onChange(of: chatId) {
+            webSocket.switchChannel(chatId)
         }
     }
 
@@ -58,17 +51,17 @@ struct ChatView: View {
     private var messageList: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                if webSocket.messages.isEmpty && !webSocket.isStreaming {
+                if channelMessages.isEmpty && !webSocket.isStreaming {
                     emptyState
                 }
 
                 LazyVStack(spacing: 12) {
-                    ForEach(webSocket.messages) { message in
+                    ForEach(channelMessages) { message in
                         MessageBubble(message: message)
                             .id(message.id)
                     }
 
-                    if webSocket.isStreaming && webSocket.messages.last?.role != .assistant {
+                    if webSocket.isStreaming && channelMessages.last?.role != .assistant {
                         TypingIndicator()
                             .id("typing")
                     }
@@ -85,10 +78,10 @@ struct ChatView: View {
                 }
             }
             .scrollDismissesKeyboard(.interactively)
-            .onChange(of: webSocket.messages.count) {
+            .onChange(of: channelMessages.count) {
                 if isAtBottom {
                     withAnimation(.easeOut(duration: 0.2)) {
-                        if let lastId = webSocket.messages.last?.id {
+                        if let lastId = channelMessages.last?.id {
                             proxy.scrollTo(lastId, anchor: .bottom)
                         } else {
                             proxy.scrollTo("typing", anchor: .bottom)
@@ -96,10 +89,10 @@ struct ChatView: View {
                     }
                 }
             }
-            .onChange(of: webSocket.messages.last?.text) {
+            .onChange(of: channelMessages.last?.text) {
                 if isAtBottom {
                     withAnimation(.easeOut(duration: 0.1)) {
-                        proxy.scrollTo(webSocket.messages.last?.id, anchor: .bottom)
+                        proxy.scrollTo(channelMessages.last?.id, anchor: .bottom)
                     }
                 }
             }
@@ -201,11 +194,6 @@ struct ChatView: View {
                     .font(.caption)
                     .foregroundStyle(.red.opacity(0.8))
                     .multilineTextAlignment(.center)
-                Button("Open Settings") {
-                    showSettings = true
-                }
-                .font(.caption)
-                .foregroundStyle(.purple)
             case .disconnected:
                 Text("Not connected")
                     .font(.caption)

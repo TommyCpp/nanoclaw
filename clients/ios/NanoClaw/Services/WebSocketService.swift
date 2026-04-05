@@ -16,15 +16,28 @@ enum ConnectionState: Equatable {
 @MainActor
 final class WebSocketService: ObservableObject {
     @Published var connectionState: ConnectionState = .disconnected
-    @Published var messages: [Message] = []
+    @Published var channels: [Channel] = []
+    @Published var currentChatId: String = "main"
     @Published var isStreaming = false
     @Published var tasks: [ScheduledTask] = []
     @Published var isLoadingTasks = false
 
+    /// Per-channel messages keyed by chatId
+    @Published var channelMessages: [String: [Message]] = [:]
+
+    /// Convenience: messages for the current channel
+    var messages: [Message] {
+        get { channelMessages[currentChatId] ?? [] }
+        set { channelMessages[currentChatId] = newValue }
+    }
+
     private var webSocketTask: URLSessionWebSocketTask?
     private var session: URLSession?
     private var pingTimer: Timer?
-    private var currentStreamingMessageID: UUID?
+    /// Per-channel streaming message ID
+    private var currentStreamingMessageID: [String: UUID] = [:]
+    /// Per-channel streaming state
+    private var streamingChannels: Set<String> = []
     private var reconnectAttempts = 0
     private let maxReconnectAttempts = 5
     private var connectionGeneration = 0
@@ -32,6 +45,7 @@ final class WebSocketService: ObservableObject {
 
     init() {
         loadMessages()
+        loadChannels()
     }
 
     func connect() {
@@ -82,7 +96,8 @@ final class WebSocketService: ObservableObject {
         session = nil
         connectionState = .disconnected
         isStreaming = false
-        currentStreamingMessageID = nil
+        streamingChannels.removeAll()
+        currentStreamingMessageID.removeAll()
         reconnectAttempts = 0
         connect()
     }
@@ -95,7 +110,8 @@ final class WebSocketService: ObservableObject {
         session = nil
         connectionState = .disconnected
         isStreaming = false
-        currentStreamingMessageID = nil
+        streamingChannels.removeAll()
+        currentStreamingMessageID.removeAll()
         reconnectAttempts = 0
     }
 
@@ -108,17 +124,42 @@ final class WebSocketService: ObservableObject {
         webSocketTask?.send(.string(jsonString)) { _ in }
     }
 
+    func requestChannels() {
+        guard connectionState.isConnected else { return }
+        let payload: [String: String] = ["type": "list_channels"]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload),
+              let jsonString = String(data: data, encoding: .utf8) else { return }
+        webSocketTask?.send(.string(jsonString)) { _ in }
+    }
+
+    func createChannel(chatId: String, name: String) {
+        guard connectionState.isConnected else { return }
+        let payload: [String: Any] = ["type": "create_channel", "chatId": chatId, "name": name]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload),
+              let jsonString = String(data: data, encoding: .utf8) else { return }
+        webSocketTask?.send(.string(jsonString)) { _ in }
+    }
+
+    func switchChannel(_ chatId: String) {
+        currentChatId = chatId
+        // Update isStreaming to reflect current channel's state
+        isStreaming = streamingChannels.contains(chatId)
+    }
+
     func send(_ text: String) {
         guard connectionState.isConnected else { return }
 
         let userMessage = Message(role: .user, text: text)
-        messages.append(userMessage)
+        var msgs = channelMessages[currentChatId] ?? []
+        msgs.append(userMessage)
+        channelMessages[currentChatId] = msgs
         saveMessages()
 
-        let payload: [String: String] = ["type": "message", "text": text]
+        let payload: [String: String] = ["type": "message", "text": text, "chatId": currentChatId]
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let jsonString = String(data: data, encoding: .utf8) else { return }
 
+        streamingChannels.insert(currentChatId)
         isStreaming = true
 
         webSocketTask?.send(.string(jsonString)) { [weak self] error in
@@ -192,19 +233,52 @@ final class WebSocketService: ObservableObject {
 
     private static var messagesFileURL: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("channel_messages.json")
+    }
+
+    private static var channelsFileURL: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("channels.json")
+    }
+
+    /// Legacy single-channel file for migration
+    private static var legacyMessagesFileURL: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("messages.json")
     }
 
     private func loadMessages() {
-        guard let data = try? Data(contentsOf: Self.messagesFileURL),
-              let saved = try? JSONDecoder().decode([Message].self, from: data)
-        else { return }
-        messages = saved
+        // Try new per-channel format first
+        if let data = try? Data(contentsOf: Self.messagesFileURL),
+           let saved = try? JSONDecoder().decode([String: [Message]].self, from: data) {
+            channelMessages = saved
+            return
+        }
+        // Migrate from legacy single-channel format
+        if let data = try? Data(contentsOf: Self.legacyMessagesFileURL),
+           let saved = try? JSONDecoder().decode([Message].self, from: data) {
+            channelMessages["main"] = saved
+            saveMessages()
+            // Remove legacy file after migration
+            try? FileManager.default.removeItem(at: Self.legacyMessagesFileURL)
+        }
     }
 
     private func saveMessages() {
-        guard let data = try? JSONEncoder().encode(messages) else { return }
+        guard let data = try? JSONEncoder().encode(channelMessages) else { return }
         try? data.write(to: Self.messagesFileURL, options: .atomic)
+    }
+
+    private func loadChannels() {
+        guard let data = try? Data(contentsOf: Self.channelsFileURL),
+              let saved = try? JSONDecoder().decode([Channel].self, from: data)
+        else { return }
+        channels = saved
+    }
+
+    private func saveChannels() {
+        guard let data = try? JSONEncoder().encode(channels) else { return }
+        try? data.write(to: Self.channelsFileURL, options: .atomic)
     }
 
     // MARK: - Private
@@ -269,28 +343,71 @@ final class WebSocketService: ObservableObject {
             connectionState = .connected
             reconnectAttempts = 0
             startPingTimer()
+            // Fetch channel list on connect
+            requestChannels()
             if let pending = json["pending"] as? Int, pending > 0 {
-                isStreaming = true // show typing indicator while buffered messages arrive
+                isStreaming = true
             }
 
         case "token":
             guard let tokenText = json["text"] as? String else { return }
-            appendToken(tokenText)
+            let chatId = json["chatId"] as? String ?? "main"
+            appendToken(tokenText, chatId: chatId)
 
         case "done":
-            isStreaming = false
-            currentStreamingMessageID = nil
+            let chatId = json["chatId"] as? String ?? "main"
+            streamingChannels.remove(chatId)
+            currentStreamingMessageID[chatId] = nil
+            if chatId == currentChatId {
+                isStreaming = false
+            }
             saveMessages()
+
+        case "typing":
+            // Typing indicators are per-channel but we only show for current
+            let chatId = json["chatId"] as? String ?? "main"
+            if chatId == currentChatId {
+                // The existing isStreaming flag already handles this
+            }
 
         case "error":
             let errorMsg = json["message"] as? String ?? "Unknown error"
-            isStreaming = false
-            currentStreamingMessageID = nil
+            let chatId = json["chatId"] as? String ?? currentChatId
+            streamingChannels.remove(chatId)
+            currentStreamingMessageID[chatId] = nil
+            if chatId == currentChatId {
+                isStreaming = false
+            }
             let errorMessage = Message(role: .assistant, text: "Error: \(errorMsg)")
-            messages.append(errorMessage)
+            var msgs = channelMessages[chatId] ?? []
+            msgs.append(errorMessage)
+            channelMessages[chatId] = msgs
 
         case "pong":
             break // heartbeat acknowledged
+
+        case "channels":
+            if let channelsArray = json["channels"] as? [[String: Any]] {
+                channels = channelsArray.compactMap { dict in
+                    guard let chatId = dict["chatId"] as? String,
+                          let name = dict["name"] as? String,
+                          let folder = dict["folder"] as? String else { return nil }
+                    let isMain = dict["isMain"] as? Bool ?? false
+                    return Channel(chatId: chatId, name: name, folder: folder, isMain: isMain)
+                }
+                saveChannels()
+            }
+
+        case "channel_created":
+            if let chatId = json["chatId"] as? String,
+               let name = json["name"] as? String,
+               let folder = json["folder"] as? String {
+                let channel = Channel(chatId: chatId, name: name, folder: folder, isMain: false)
+                if !channels.contains(where: { $0.chatId == chatId }) {
+                    channels.append(channel)
+                    saveChannels()
+                }
+            }
 
         case "tasks":
             isLoadingTasks = false
@@ -307,14 +424,23 @@ final class WebSocketService: ObservableObject {
         }
     }
 
-    private func appendToken(_ token: String) {
-        if let id = currentStreamingMessageID,
-           let index = messages.firstIndex(where: { $0.id == id }) {
-            messages[index].text += token
+    private func appendToken(_ token: String, chatId: String) {
+        if let id = currentStreamingMessageID[chatId],
+           var msgs = channelMessages[chatId],
+           let index = msgs.firstIndex(where: { $0.id == id }) {
+            msgs[index].text += token
+            channelMessages[chatId] = msgs
         } else {
             let newMessage = Message(role: .assistant, text: token)
-            currentStreamingMessageID = newMessage.id
-            messages.append(newMessage)
+            currentStreamingMessageID[chatId] = newMessage.id
+            var msgs = channelMessages[chatId] ?? []
+            msgs.append(newMessage)
+            channelMessages[chatId] = msgs
+        }
+        // Update isStreaming if this is the current channel
+        if chatId == currentChatId {
+            streamingChannels.insert(chatId)
+            isStreaming = true
         }
         saveMessages()
     }
@@ -323,7 +449,8 @@ final class WebSocketService: ObservableObject {
         stopPingTimer()
         webSocketTask = nil
         isStreaming = false
-        currentStreamingMessageID = nil
+        streamingChannels.removeAll()
+        currentStreamingMessageID.removeAll()
         connectionState = .disconnected
 
         guard reconnectAttempts < maxReconnectAttempts else {
