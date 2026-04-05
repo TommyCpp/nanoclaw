@@ -2,9 +2,9 @@ import SwiftUI
 
 struct ChannelListView: View {
     @EnvironmentObject private var webSocket: WebSocketService
-    @State private var showNewChannel = false
-    @State private var newChatId = ""
-    @State private var newChannelName = ""
+    @State private var showNewGroup = false
+    @State private var newGroupId = ""
+    @State private var newGroupName = ""
 
     var body: some View {
         List {
@@ -33,33 +33,33 @@ struct ChannelListView: View {
                 }
             }
         }
-        .navigationTitle("Channels")
+        .navigationTitle("Groups")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    showNewChannel = true
+                    showNewGroup = true
                 } label: {
                     Image(systemName: "plus")
                 }
                 .disabled(!webSocket.connectionState.isConnected)
             }
         }
-        .alert("New Channel", isPresented: $showNewChannel) {
-            TextField("Channel ID (e.g. work)", text: $newChatId)
+        .alert("New Group", isPresented: $showNewGroup) {
+            TextField("Group ID (e.g. work)", text: $newGroupId)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
-            TextField("Display Name", text: $newChannelName)
+            TextField("Display Name", text: $newGroupName)
             Button("Create") {
-                let chatId = newChatId.trimmingCharacters(in: .whitespacesAndNewlines)
-                let name = newChannelName.trimmingCharacters(in: .whitespacesAndNewlines)
+                let chatId = newGroupId.trimmingCharacters(in: .whitespacesAndNewlines)
+                let name = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !chatId.isEmpty else { return }
                 webSocket.createChannel(chatId: chatId, name: name.isEmpty ? chatId : name)
-                newChatId = ""
-                newChannelName = ""
+                newGroupId = ""
+                newGroupName = ""
             }
             Button("Cancel", role: .cancel) {
-                newChatId = ""
-                newChannelName = ""
+                newGroupId = ""
+                newGroupName = ""
             }
         }
     }

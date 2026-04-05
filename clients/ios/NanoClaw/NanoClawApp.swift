@@ -26,7 +26,7 @@ struct NanoClawApp: App {
                         }
                 }
                 .tabItem {
-                    Label("Channels", systemImage: "bubble.left.and.bubble.right")
+                    Label("Groups", systemImage: "bubble.left.and.bubble.right")
                 }
                 JobsView()
                     .tabItem {
