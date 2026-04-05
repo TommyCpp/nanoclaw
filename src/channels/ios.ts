@@ -142,8 +142,7 @@ export class IosChannel implements Channel {
         if (msg.type === 'create_channel') {
           const chatId =
             typeof msg.chatId === 'string' ? msg.chatId.trim() : '';
-          const name =
-            typeof msg.name === 'string' ? msg.name.trim() : chatId;
+          const name = typeof msg.name === 'string' ? msg.name.trim() : chatId;
           if (!chatId) {
             ws.send(
               JSON.stringify({ type: 'error', message: 'chatId required' }),

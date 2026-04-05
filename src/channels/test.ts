@@ -85,7 +85,9 @@ export class TestChannel implements Channel {
     // POST /channels — create a new channel
     if (method === 'POST' && url === '/channels') {
       let body = '';
-      req.on('data', (chunk) => { body += chunk; });
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
       req.on('end', () => {
         let chatId: string;
         let name: string | undefined;
@@ -115,7 +117,9 @@ export class TestChannel implements Channel {
         this.ensureChannelRegistered(chatId, false);
         const jid = testJid(chatId);
         res.writeHead(201, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, jid, folder, name: name || chatId }));
+        res.end(
+          JSON.stringify({ ok: true, jid, folder, name: name || chatId }),
+        );
       });
       return;
     }
@@ -153,9 +157,10 @@ export class TestChannel implements Channel {
             return;
           }
           text = parsed.text.trim();
-          chatId = (typeof parsed.chatId === 'string' && parsed.chatId.trim())
-            ? parsed.chatId.trim()
-            : DEFAULT_CHAT_ID;
+          chatId =
+            typeof parsed.chatId === 'string' && parsed.chatId.trim()
+              ? parsed.chatId.trim()
+              : DEFAULT_CHAT_ID;
         } catch {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'invalid JSON' }));
@@ -195,7 +200,10 @@ export class TestChannel implements Channel {
     }
 
     // GET /messages — drain response buffer (optional ?chatId= query param)
-    if (method === 'GET' && (url === '/messages' || url?.startsWith('/messages?'))) {
+    if (
+      method === 'GET' &&
+      (url === '/messages' || url?.startsWith('/messages?'))
+    ) {
       const urlObj = new URL(url, `http://${req.headers.host}`);
       const chatId = urlObj.searchParams.get('chatId') ?? DEFAULT_CHAT_ID;
       const buf = this.buffers.get(chatId) ?? [];
@@ -207,7 +215,10 @@ export class TestChannel implements Channel {
     }
 
     // DELETE /session — clear session (optional ?chatId= query param)
-    if (method === 'DELETE' && (url === '/session' || url?.startsWith('/session?'))) {
+    if (
+      method === 'DELETE' &&
+      (url === '/session' || url?.startsWith('/session?'))
+    ) {
       const urlObj = new URL(url, `http://${req.headers.host}`);
       const chatId = urlObj.searchParams.get('chatId') ?? DEFAULT_CHAT_ID;
       this.opts.clearSession?.(testFolder(chatId));
