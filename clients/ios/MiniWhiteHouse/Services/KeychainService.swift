@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 enum KeychainService {
-    private static let service = "com.nanoclaw.auth"
+    private static let service = "com.miniwhitehouse.auth"
     private static let account = "auth_token"
 
     static func saveToken(_ token: String) -> Bool {

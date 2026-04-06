@@ -1,15 +1,20 @@
 import SwiftUI
 
 @main
-struct NanoClawApp: App {
+struct MiniWhiteHouseApp: App {
     @StateObject private var webSocketService = WebSocketService()
     @Environment(\.scenePhase) private var scenePhase
     @State private var showSettings = false
+    @State private var navigationPath = NavigationPath()
+
+    private var launchToMain: Bool {
+        UserDefaults.standard.string(forKey: "launchScreen") == "main"
+    }
 
     var body: some Scene {
         WindowGroup {
             TabView {
-                NavigationStack {
+                NavigationStack(path: $navigationPath) {
                     ChannelListView()
                         .navigationDestination(for: String.self) { chatId in
                             ChatView(chatId: chatId)
@@ -19,18 +24,18 @@ struct NanoClawApp: App {
                                 Button {
                                     showSettings = true
                                 } label: {
-                                    Image(systemName: "gearshape")
+                                    Image(systemName: "seal")
                                         .foregroundStyle(.gray)
                                 }
                             }
                         }
                 }
                 .tabItem {
-                    Label("Groups", systemImage: "bubble.left.and.bubble.right")
+                    Label("Cabinet", systemImage: "building.columns")
                 }
                 JobsView()
                     .tabItem {
-                        Label("Jobs", systemImage: "clock")
+                        Label("Executive Orders", systemImage: "doc.text")
                     }
             }
             .tint(.purple)
@@ -45,6 +50,9 @@ struct NanoClawApp: App {
                     showSettings = true
                 } else {
                     webSocketService.connect()
+                    if launchToMain {
+                        navigationPath.append("main")
+                    }
                 }
             }
         }

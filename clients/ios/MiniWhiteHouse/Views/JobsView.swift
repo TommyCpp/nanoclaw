@@ -21,7 +21,7 @@ struct JobsView: View {
                 }
             }
             .background(Color(hex: 0x111111))
-            .navigationTitle("Scheduled Jobs")
+            .navigationTitle("Executive Orders")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color(hex: 0x111111), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
@@ -43,10 +43,10 @@ struct JobsView: View {
             Image(systemName: "clock.badge.xmark")
                 .font(.system(size: 48))
                 .foregroundStyle(.gray.opacity(0.4))
-            Text("No Scheduled Jobs")
+            Text("No Executive Orders")
                 .font(.headline)
                 .foregroundStyle(.gray)
-            Text("Tasks you schedule will appear here.")
+            Text("Executive orders will appear here.")
                 .font(.caption)
                 .foregroundStyle(.gray.opacity(0.6))
                 .multilineTextAlignment(.center)

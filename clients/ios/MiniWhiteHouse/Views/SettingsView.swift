@@ -89,6 +89,16 @@ struct SettingsView: View {
                     }
                 }
 
+                Section("Launch") {
+                    Picker("Open app to", selection: Binding(
+                        get: { UserDefaults.standard.string(forKey: "launchScreen") ?? "cabinet" },
+                        set: { UserDefaults.standard.set($0, forKey: "launchScreen") }
+                    )) {
+                        Text("Cabinet (department list)").tag("cabinet")
+                        Text("Oval Office (main channel)").tag("main")
+                    }
+                }
+
                 Section {
                     Button("Reconnect") {
                         save()
@@ -98,7 +108,7 @@ struct SettingsView: View {
                     }
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle("Oval Office")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

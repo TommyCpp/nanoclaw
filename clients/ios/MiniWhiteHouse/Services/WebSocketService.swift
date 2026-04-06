@@ -144,6 +144,8 @@ final class WebSocketService: ObservableObject {
         currentChatId = chatId
         // Update isStreaming to reflect current channel's state
         isStreaming = streamingChannels.contains(chatId)
+        // Force SwiftUI to re-evaluate channelMessages for this chatId
+        objectWillChange.send()
     }
 
     func send(_ text: String) {
@@ -437,9 +439,8 @@ final class WebSocketService: ObservableObject {
             msgs.append(newMessage)
             channelMessages[chatId] = msgs
         }
-        // Update isStreaming if this is the current channel
+        streamingChannels.insert(chatId)
         if chatId == currentChatId {
-            streamingChannels.insert(chatId)
             isStreaming = true
         }
         saveMessages()

@@ -1,0 +1,425 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		047922F27C179A31095C5303 /* ScheduledTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085ED56EAC3960CF0EE9AEA /* ScheduledTask.swift */; };
+		0643DE2B261D4121D2630FC2 /* ConnectionConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADEC90CF5A0005DC5D558C64 /* ConnectionConfig.swift */; };
+		169056BE62B4F87EF46C84DE /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B2B9E0F456E91FD7B068281 /* KeychainService.swift */; };
+		198AA5A62D4245F6BF9121CB /* MiniWhiteHouseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AA4DFBC19E1D2DD0398AD35 /* MiniWhiteHouseApp.swift */; };
+		2E502900099CDBF93E4080B9 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B58D8A51B361A794AD22D00C /* ChatView.swift */; };
+		4493FE414049D9F347E9126A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B6989DFAA3AD3057A3B64DE /* SettingsView.swift */; };
+		50012CA69A9249F7D7C50B41 /* TypingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40A18CCA06538322A3760BEE /* TypingIndicator.swift */; };
+		53A2AC83018EC0EDD0E8F541 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F0C672E0A808D83F1851B95A /* Assets.xcassets */; };
+		691E0E89A01400F9E0CAB359 /* NewDepartmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FC411CFE8623617C0C9357 /* NewDepartmentView.swift */; };
+		77B4DA3AA2FA0AA695167A53 /* Channel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB67A8770FD8023EF41E800B /* Channel.swift */; };
+		9D2F4E79B8E225BB21BB7283 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = FA5CFD984D63C8B112703040 /* MarkdownUI */; };
+		A5D99B925DCAEFC5ED8DF82A /* MessageBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = E71779A68EC260B230D01354 /* MessageBubble.swift */; };
+		ADB848091E0280148773A2EF /* WebSocketService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E06DE8EA001E531029F862F /* WebSocketService.swift */; };
+		B69023D0AA2EF483866FBD5B /* JobsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5499CF74F7FD39741161D64C /* JobsView.swift */; };
+		E0FF8467E1628D8BFECEA496 /* ChannelListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF6005CA130013293168A403 /* ChannelListView.swift */; };
+		E7C1D403E9FB968DE1CE82A7 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FF65D1765CB32FE3A2EC61 /* Message.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		09FF65D1765CB32FE3A2EC61 /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
+		2085ED56EAC3960CF0EE9AEA /* ScheduledTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledTask.swift; sourceTree = "<group>"; };
+		3B6989DFAA3AD3057A3B64DE /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		40A18CCA06538322A3760BEE /* TypingIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypingIndicator.swift; sourceTree = "<group>"; };
+		5499CF74F7FD39741161D64C /* JobsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobsView.swift; sourceTree = "<group>"; };
+		6AA4DFBC19E1D2DD0398AD35 /* MiniWhiteHouseApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniWhiteHouseApp.swift; sourceTree = "<group>"; };
+		6B8ED1D902F6EAACBBD9B6F0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		7B2B9E0F456E91FD7B068281 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
+		9E06DE8EA001E531029F862F /* WebSocketService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSocketService.swift; sourceTree = "<group>"; };
+		ADEC90CF5A0005DC5D558C64 /* ConnectionConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionConfig.swift; sourceTree = "<group>"; };
+		B58D8A51B361A794AD22D00C /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		BF6005CA130013293168A403 /* ChannelListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelListView.swift; sourceTree = "<group>"; };
+		CB67A8770FD8023EF41E800B /* Channel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Channel.swift; sourceTree = "<group>"; };
+		D0FC411CFE8623617C0C9357 /* NewDepartmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewDepartmentView.swift; sourceTree = "<group>"; };
+		E71779A68EC260B230D01354 /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
+		ECABCFA02DA820837A6788B0 /* MiniWhiteHouse.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MiniWhiteHouse.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F0C672E0A808D83F1851B95A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		236ED0289E73C9D62B8CDDF7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9D2F4E79B8E225BB21BB7283 /* MarkdownUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		10C16671F94DCA2BC6194FFF /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				7B2B9E0F456E91FD7B068281 /* KeychainService.swift */,
+				9E06DE8EA001E531029F862F /* WebSocketService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		129D349D77C5EC138AECE6C3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				ECABCFA02DA820837A6788B0 /* MiniWhiteHouse.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		2540453B1685B1EB1EDB6D97 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				CB67A8770FD8023EF41E800B /* Channel.swift */,
+				ADEC90CF5A0005DC5D558C64 /* ConnectionConfig.swift */,
+				09FF65D1765CB32FE3A2EC61 /* Message.swift */,
+				2085ED56EAC3960CF0EE9AEA /* ScheduledTask.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		3E4B070D29CF033D3351B96B = {
+			isa = PBXGroup;
+			children = (
+				84CA5739B1E6F39A3A6DE404 /* MiniWhiteHouse */,
+				129D349D77C5EC138AECE6C3 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		84CA5739B1E6F39A3A6DE404 /* MiniWhiteHouse */ = {
+			isa = PBXGroup;
+			children = (
+				F0C672E0A808D83F1851B95A /* Assets.xcassets */,
+				6B8ED1D902F6EAACBBD9B6F0 /* Info.plist */,
+				6AA4DFBC19E1D2DD0398AD35 /* MiniWhiteHouseApp.swift */,
+				2540453B1685B1EB1EDB6D97 /* Models */,
+				10C16671F94DCA2BC6194FFF /* Services */,
+				BD24758E4573D27DCD8A9E7E /* Views */,
+			);
+			path = MiniWhiteHouse;
+			sourceTree = "<group>";
+		};
+		BD24758E4573D27DCD8A9E7E /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				BF6005CA130013293168A403 /* ChannelListView.swift */,
+				B58D8A51B361A794AD22D00C /* ChatView.swift */,
+				5499CF74F7FD39741161D64C /* JobsView.swift */,
+				E71779A68EC260B230D01354 /* MessageBubble.swift */,
+				D0FC411CFE8623617C0C9357 /* NewDepartmentView.swift */,
+				3B6989DFAA3AD3057A3B64DE /* SettingsView.swift */,
+				40A18CCA06538322A3760BEE /* TypingIndicator.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		427C96637A8A1D9A1967EB06 /* MiniWhiteHouse */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BFF54AB8151D1E4E140925C1 /* Build configuration list for PBXNativeTarget "MiniWhiteHouse" */;
+			buildPhases = (
+				E84FA1C8DA924B4244218CF5 /* Sources */,
+				5FA36CE7722DE4A0BD562CB4 /* Resources */,
+				236ED0289E73C9D62B8CDDF7 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MiniWhiteHouse;
+			packageProductDependencies = (
+				FA5CFD984D63C8B112703040 /* MarkdownUI */,
+			);
+			productName = MiniWhiteHouse;
+			productReference = ECABCFA02DA820837A6788B0 /* MiniWhiteHouse.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		848BF6B86733A5C7EE1717F3 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					427C96637A8A1D9A1967EB06 = {
+						DevelopmentTeam = 8HU2W469PT;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = F33472A2AF22B0AD111B25BC /* Build configuration list for PBXProject "MiniWhiteHouse" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 3E4B070D29CF033D3351B96B;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5B7661D75CAD62BD62DF4655 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 129D349D77C5EC138AECE6C3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				427C96637A8A1D9A1967EB06 /* MiniWhiteHouse */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5FA36CE7722DE4A0BD562CB4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				53A2AC83018EC0EDD0E8F541 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		E84FA1C8DA924B4244218CF5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				77B4DA3AA2FA0AA695167A53 /* Channel.swift in Sources */,
+				E0FF8467E1628D8BFECEA496 /* ChannelListView.swift in Sources */,
+				2E502900099CDBF93E4080B9 /* ChatView.swift in Sources */,
+				0643DE2B261D4121D2630FC2 /* ConnectionConfig.swift in Sources */,
+				B69023D0AA2EF483866FBD5B /* JobsView.swift in Sources */,
+				169056BE62B4F87EF46C84DE /* KeychainService.swift in Sources */,
+				E7C1D403E9FB968DE1CE82A7 /* Message.swift in Sources */,
+				A5D99B925DCAEFC5ED8DF82A /* MessageBubble.swift in Sources */,
+				198AA5A62D4245F6BF9121CB /* MiniWhiteHouseApp.swift in Sources */,
+				691E0E89A01400F9E0CAB359 /* NewDepartmentView.swift in Sources */,
+				047922F27C179A31095C5303 /* ScheduledTask.swift in Sources */,
+				4493FE414049D9F347E9126A /* SettingsView.swift in Sources */,
+				50012CA69A9249F7D7C50B41 /* TypingIndicator.swift in Sources */,
+				ADB848091E0280148773A2EF /* WebSocketService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		2D27D886A7321FC4E4A39590 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		4BC1C1E9030782A0FF24F1DD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8HU2W469PT;
+				INFOPLIST_FILE = MiniWhiteHouse/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nanoclaw.ios;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8E384EF733FF6ABABF1EBAFF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A49586F62688EF9FD52DB6B7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8HU2W469PT;
+				INFOPLIST_FILE = MiniWhiteHouse/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nanoclaw.ios;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		BFF54AB8151D1E4E140925C1 /* Build configuration list for PBXNativeTarget "MiniWhiteHouse" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4BC1C1E9030782A0FF24F1DD /* Debug */,
+				A49586F62688EF9FD52DB6B7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F33472A2AF22B0AD111B25BC /* Build configuration list for PBXProject "MiniWhiteHouse" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8E384EF733FF6ABABF1EBAFF /* Debug */,
+				2D27D886A7321FC4E4A39590 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		5B7661D75CAD62BD62DF4655 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.3.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		FA5CFD984D63C8B112703040 /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5B7661D75CAD62BD62DF4655 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 848BF6B86733A5C7EE1717F3 /* Project object */;
+}
