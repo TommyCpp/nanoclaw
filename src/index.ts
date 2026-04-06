@@ -86,6 +86,30 @@ let messageLoopRunning = false;
 const channels: Channel[] = [];
 const queue = new GroupQueue();
 
+// Per-group idle timers — shared between processGroupMessages and the message loop
+const groupIdleTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function resetGroupIdleTimer(chatJid: string): void {
+  const existing = groupIdleTimers.get(chatJid);
+  if (existing) clearTimeout(existing);
+  groupIdleTimers.set(
+    chatJid,
+    setTimeout(() => {
+      logger.debug({ chatJid }, 'Idle timeout, closing container stdin');
+      queue.closeStdin(chatJid);
+      groupIdleTimers.delete(chatJid);
+    }, IDLE_TIMEOUT),
+  );
+}
+
+function clearGroupIdleTimer(chatJid: string): void {
+  const existing = groupIdleTimers.get(chatJid);
+  if (existing) {
+    clearTimeout(existing);
+    groupIdleTimers.delete(chatJid);
+  }
+}
+
 function loadState(): void {
   lastTimestamp = getRouterState('last_timestamp') || '';
   const agentTs = getRouterState('last_agent_timestamp');
@@ -207,19 +231,7 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
     'Processing messages',
   );
 
-  // Track idle timer for closing stdin when agent is idle
-  let idleTimer: ReturnType<typeof setTimeout> | null = null;
-
-  const resetIdleTimer = () => {
-    if (idleTimer) clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => {
-      logger.debug(
-        { group: group.name },
-        'Idle timeout, closing container stdin',
-      );
-      queue.closeStdin(chatJid);
-    }, IDLE_TIMEOUT);
-  };
+  // Use shared idle timer so the message loop can reset it when piping new messages
 
   await channel.setTyping?.(chatJid, true);
   let hadError = false;
@@ -240,7 +252,7 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
         outputSentToUser = true;
       }
       // Only reset idle timer on actual results, not session-update markers (result: null)
-      resetIdleTimer();
+      resetGroupIdleTimer(chatJid);
     }
 
     if (result.status === 'success') {
@@ -253,7 +265,7 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
   });
 
   await channel.setTyping?.(chatJid, false);
-  if (idleTimer) clearTimeout(idleTimer);
+  clearGroupIdleTimer(chatJid);
 
   if (output === 'error' || hadError) {
     // If we already sent output to the user, don't roll back the cursor —
@@ -441,6 +453,8 @@ async function startMessageLoop(): Promise<void> {
             lastAgentTimestamp[chatJid] =
               messagesToSend[messagesToSend.length - 1].timestamp;
             saveState();
+            // Reset idle timer — new work was just sent to the container
+            resetGroupIdleTimer(chatJid);
             // Show typing indicator while the container processes the piped message
             channel
               .setTyping?.(chatJid, true)

@@ -156,7 +156,7 @@ export class IosChannel implements Channel {
             );
             return;
           }
-          this.ensureChannelRegistered(chatId, false);
+          this.ensureChannelRegistered(chatId, false, name);
           ws.send(
             JSON.stringify({
               type: 'channel_created',
@@ -261,22 +261,40 @@ export class IosChannel implements Channel {
       (ws) => ws.readyState === WebSocket.OPEN,
     );
     if (connected.length === 0) {
-      const buf = this.pendingMessages.get(chatId) ?? [];
-      buf.push(token, done);
-      this.pendingMessages.set(chatId, buf);
-      logger.info(
-        { chatId, buffered: buf.length, length: text.length },
-        'iOS: no client connected, buffered message',
-      );
+      this.bufferPending(chatId, [token, done]);
       return;
     }
     for (const ws of connected) {
-      ws.send(token);
-      ws.send(done);
+      try {
+        await new Promise<void>((resolve, reject) => {
+          ws.send(token, (err) => (err ? reject(err) : resolve()));
+        });
+        await new Promise<void>((resolve, reject) => {
+          ws.send(done, (err) => (err ? reject(err) : resolve()));
+        });
+      } catch (err) {
+        logger.warn(
+          { chatId, err },
+          'iOS: send failed, buffering and removing stale client',
+        );
+        this.clients.delete(ws);
+        this.bufferPending(chatId, [token, done]);
+        return;
+      }
     }
     logger.info(
       { clients: connected.length, chatId, length: text.length },
       'iOS: message sent',
+    );
+  }
+
+  private bufferPending(chatId: string, messages: string[]): void {
+    const buf = this.pendingMessages.get(chatId) ?? [];
+    buf.push(...messages);
+    this.pendingMessages.set(chatId, buf);
+    logger.info(
+      { chatId, buffered: buf.length },
+      'iOS: no client connected, buffered message',
     );
   }
 
@@ -305,14 +323,18 @@ export class IosChannel implements Channel {
     logger.info('iOS WebSocket channel disconnected');
   }
 
-  private ensureChannelRegistered(chatId: string, isMain: boolean): void {
+  private ensureChannelRegistered(
+    chatId: string,
+    isMain: boolean,
+    displayName?: string,
+  ): void {
     const jid = iosJid(chatId);
     const groups = this.opts.registeredGroups();
     if (groups[jid]) return;
 
     const folder = iosFolder(chatId);
     const group: RegisteredGroup = {
-      name: `iOS ${chatId}`,
+      name: displayName || chatId,
       folder,
       trigger: `@${ASSISTANT_NAME}`,
       added_at: new Date().toISOString(),

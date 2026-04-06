@@ -159,8 +159,18 @@ export class GroupQueue {
    */
   sendMessage(groupJid: string, text: string): boolean {
     const state = this.getGroup(groupJid);
-    if (!state.active || !state.groupFolder || state.isTaskContainer)
+    if (!state.active || !state.groupFolder || state.isTaskContainer) {
+      logger.debug(
+        {
+          groupJid,
+          active: state.active,
+          groupFolder: state.groupFolder,
+          isTaskContainer: state.isTaskContainer,
+        },
+        'sendMessage rejected',
+      );
       return false;
+    }
     state.idleWaiting = false; // Agent is about to receive work, no longer idle
 
     const inputDir = path.join(DATA_DIR, 'ipc', state.groupFolder, 'input');
@@ -172,7 +182,8 @@ export class GroupQueue {
       fs.writeFileSync(tempPath, JSON.stringify({ type: 'message', text }));
       fs.renameSync(tempPath, filepath);
       return true;
-    } catch {
+    } catch (err) {
+      logger.warn({ groupJid, err }, 'sendMessage IPC write failed');
       return false;
     }
   }
