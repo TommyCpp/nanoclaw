@@ -1,0 +1,210 @@
+<h2>工具结果有时是主角</h2>
+<p class="subtitle">比如 CC session 的终端输出 — 你想怎么看到它？</p>
+
+<style>
+  .scenario-wrap {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 16px;
+  }
+  .scenario {
+    width: 268px;
+    background: #111;
+    border-radius: 28px;
+    border: 2px solid #333;
+    padding: 18px 13px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+  .scenario:hover { border-color: #7B2FBE; }
+  .scenario.selected { border-color: #7B2FBE !important; box-shadow: 0 0 0 3px rgba(123,47,190,0.35); }
+  .scenario-label {
+    position: absolute;
+    top: -12px; left: 50%;
+    transform: translateX(-50%);
+    background: #1e1e2e;
+    color: #aaa;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 2px 10px;
+    border-radius: 99px;
+    border: 1px solid #333;
+    white-space: nowrap;
+  }
+  .scenario.selected .scenario-label { background: #7B2FBE; color: #fff; border-color: #7B2FBE; }
+
+  .bubble-user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #7B2FBE, #5B1FA0);
+    color: #fff;
+    padding: 9px 13px;
+    border-radius: 16px 16px 4px 16px;
+    font-size: 12px;
+    max-width: 75%;
+    line-height: 1.4;
+  }
+  .bubble-agent {
+    align-self: flex-start;
+    background: #2A2A2A;
+    color: #fff;
+    padding: 9px 13px;
+    border-radius: 16px 16px 16px 4px;
+    font-size: 12px;
+    max-width: 88%;
+    line-height: 1.5;
+  }
+  .bubble-agent .tag {
+    font-size: 10px;
+    color: #888;
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  /* Terminal block — full prominence */
+  .bubble-terminal {
+    align-self: flex-start;
+    background: #0d0d0d;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 92%;
+    font-family: 'SF Mono', monospace;
+  }
+  .terminal-titlebar {
+    background: #1a1a1a;
+    border-bottom: 1px solid #252525;
+    padding: 5px 10px;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px; color: #555;
+  }
+  .terminal-dots { display: flex; gap: 4px; }
+  .terminal-dots span {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+  .dot-r { background: #3a1515; }
+  .dot-y { background: #2e2a10; }
+  .dot-g { background: #0d2e10; }
+  .terminal-body {
+    padding: 9px 12px;
+    font-size: 11px;
+    line-height: 1.6;
+    color: #ccc;
+  }
+  .t-prompt { color: #555; }
+  .t-ok { color: #4ec94e; }
+  .t-dim { color: #555; }
+  .t-id { color: #7ec8e3; }
+
+  /* Tool pill — collapsed, secondary */
+  .tool-pill {
+    align-self: flex-start;
+    display: flex; align-items: center; gap: 6px;
+    background: #1e1e1e;
+    border: 1px solid #2a2a2a;
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 10px; color: #666;
+  }
+
+  /* Inline tool output inside agent bubble */
+  .bubble-agent-inline {
+    align-self: flex-start;
+    background: #2A2A2A;
+    border-radius: 16px 16px 16px 4px;
+    font-size: 12px;
+    max-width: 92%;
+    overflow: hidden;
+  }
+  .inline-tool-block {
+    background: #111;
+    border-bottom: 1px solid #333;
+    padding: 8px 12px;
+    font-family: 'SF Mono', monospace;
+    font-size: 10.5px;
+    color: #4ec94e;
+    line-height: 1.5;
+  }
+  .inline-tool-header {
+    font-size: 9.5px; color: #555;
+    font-weight: 600; letter-spacing: 0.05em;
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+  .inline-agent-text {
+    padding: 8px 12px;
+    color: #ccc;
+    line-height: 1.5;
+    font-size: 12px;
+  }
+</style>
+
+<div class="scenario-wrap">
+
+  <!-- Option A: terminal bubble = primary, agent text = secondary caption -->
+  <div class="option scenario" data-choice="a" onclick="toggleSelect(this)">
+    <div class="scenario-label">A · 终端气泡独立出来</div>
+    <div class="bubble-user">/cc-session</div>
+    <div class="bubble-terminal">
+      <div class="terminal-titlebar">
+        <div class="terminal-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <span>Bash</span>
+      </div>
+      <div class="terminal-body">
+        <span class="t-prompt">$ </span>nanoclaw cc-session start<br>
+        <span class="t-ok">✓</span> Session started<br>
+        <span class="t-id">ID: cc-main-a3f9</span><br>
+        <span class="t-dim">Port: 8080 · PID: 4821</span>
+      </div>
+    </div>
+    <div class="bubble-agent">
+      <div class="tag">💬 Agent</div>
+      CC session 已启动，可以开始使用了。
+    </div>
+  </div>
+
+  <!-- Option B: tool pill for background tools, terminal block for "output-y" tools -->
+  <div class="option scenario" data-choice="b" onclick="toggleSelect(this)">
+    <div class="scenario-label">B · 按内容自动决定权重</div>
+    <div class="bubble-user">/cc-session</div>
+    <div class="tool-pill">⚙ Read config · 2 files</div>
+    <div class="bubble-terminal">
+      <div class="terminal-titlebar">
+        <div class="terminal-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <span>Bash — 主要输出</span>
+      </div>
+      <div class="terminal-body">
+        <span class="t-ok">✓</span> Session started<br>
+        <span class="t-id">ID: cc-main-a3f9</span><br>
+        <span class="t-dim">Port: 8080 · PID: 4821</span>
+      </div>
+    </div>
+    <div class="bubble-agent">CC session 已启动。</div>
+  </div>
+
+  <!-- Option C: everything inside one bubble, tool output gets terminal styling -->
+  <div class="option scenario" data-choice="c" onclick="toggleSelect(this)">
+    <div class="scenario-label">C · 全在一个气泡里</div>
+    <div class="bubble-user">/cc-session</div>
+    <div class="bubble-agent-inline">
+      <div class="inline-tool-block">
+        <div class="inline-tool-header">⚙ Bash output</div>
+        ✓ Session started<br>
+        ID: cc-main-a3f9<br>
+        <span style="color:#555">Port: 8080 · PID: 4821</span>
+      </div>
+      <div class="inline-agent-text">CC session 已启动，可以开始使用了。</div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="text-align:center;margin-top:20px;font-size:12px;">
+  也可以结合前面的讨论说说你的偏好
+</p>

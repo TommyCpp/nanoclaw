@@ -1,0 +1,7 @@
+{"type":"server-started","port":53449,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:53449","screen_dir":"/Users/zhongyang/Dev/nanoclaw/.superpowers/brainstorm/7109-1774941469/content","state_dir":"/Users/zhongyang/Dev/nanoclaw/.superpowers/brainstorm/7109-1774941469/state"}
+{"type":"screen-added","file":"/Users/zhongyang/Dev/nanoclaw/.superpowers/brainstorm/7109-1774941469/content/visual-style.html"}
+{"type":"screen-added","file":"/Users/zhongyang/Dev/nanoclaw/.superpowers/brainstorm/7109-1774941469/content/tool-prominence.html"}
+{"source":"user-event","type":"click","text":"C · 全在一个气泡里\n    /cc-session\n    \n      \n        ⚙ Bash output\n        ✓ Session started\n        ID: cc-main-a3f9\n        Port: 8080 · PID: 4821\n      \n      CC session 已启动，可以开始使用了。","choice":"c","id":null,"timestamp":1774941929063}
+{"source":"user-event","type":"click","text":"C · 全在一个气泡里\n    /cc-session\n    \n      \n        ⚙ Bash output\n        ✓ Session started\n        ID: cc-main-a3f9\n        Port: 8080 · PID: 4821\n      \n      CC session 已启动，可以开始使用了。","choice":"c","id":null,"timestamp":1774941933820}
+{"source":"user-event","type":"click","text":"C · 全在一个气泡里\n    /cc-session\n    \n      \n        ⚙ Bash output\n        ✓ Session started\n        ID: cc-main-a3f9\n        Port: 8080 · PID: 4821\n      \n      CC session 已启动，可以开始使用了。","choice":"c","id":null,"timestamp":1774941933976}
+{"type":"server-stopped","reason":"idle timeout"}

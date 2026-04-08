@@ -8,3 +8,9 @@ struct Channel: Identifiable, Equatable, Codable {
 
     var id: String { chatId }
 }
+
+struct ChannelPreview {
+    let lastMessage: String
+    let timestamp: Date
+    let unreadCount: Int
+}

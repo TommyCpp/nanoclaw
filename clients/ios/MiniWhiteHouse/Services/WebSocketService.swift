@@ -21,6 +21,7 @@ final class WebSocketService: ObservableObject {
     @Published var isStreaming = false
     @Published var tasks: [ScheduledTask] = []
     @Published var isLoadingTasks = false
+    @Published var unreadCounts: [String: Int] = [:]
 
     /// Per-channel messages keyed by chatId
     @Published var channelMessages: [String: [Message]] = [:]
@@ -140,8 +141,18 @@ final class WebSocketService: ObservableObject {
         webSocketTask?.send(.string(jsonString)) { _ in }
     }
 
+    func clearHistory(chatId: String? = nil) {
+        if let chatId {
+            channelMessages[chatId] = []
+        } else {
+            channelMessages.removeAll()
+        }
+        saveMessages()
+    }
+
     func switchChannel(_ chatId: String) {
         currentChatId = chatId
+        unreadCounts[chatId] = 0
         // Update isStreaming to reflect current channel's state
         isStreaming = streamingChannels.contains(chatId)
         // Force SwiftUI to re-evaluate channelMessages for this chatId
@@ -442,6 +453,8 @@ final class WebSocketService: ObservableObject {
         streamingChannels.insert(chatId)
         if chatId == currentChatId {
             isStreaming = true
+        } else {
+            unreadCounts[chatId, default: 0] += 1
         }
         saveMessages()
     }

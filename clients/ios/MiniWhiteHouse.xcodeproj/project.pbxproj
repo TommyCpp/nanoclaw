@@ -21,6 +21,7 @@
 		A5D99B925DCAEFC5ED8DF82A /* MessageBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = E71779A68EC260B230D01354 /* MessageBubble.swift */; };
 		ADB848091E0280148773A2EF /* WebSocketService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E06DE8EA001E531029F862F /* WebSocketService.swift */; };
 		B69023D0AA2EF483866FBD5B /* JobsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5499CF74F7FD39741161D64C /* JobsView.swift */; };
+		C31912E570372B7364D7F7C3 /* QuickAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0B206387215340DD5DABF22 /* QuickAction.swift */; };
 		E0FF8467E1628D8BFECEA496 /* ChannelListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF6005CA130013293168A403 /* ChannelListView.swift */; };
 		E7C1D403E9FB968DE1CE82A7 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FF65D1765CB32FE3A2EC61 /* Message.swift */; };
 /* End PBXBuildFile section */
@@ -38,6 +39,7 @@
 		ADEC90CF5A0005DC5D558C64 /* ConnectionConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionConfig.swift; sourceTree = "<group>"; };
 		B58D8A51B361A794AD22D00C /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		BF6005CA130013293168A403 /* ChannelListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelListView.swift; sourceTree = "<group>"; };
+		C0B206387215340DD5DABF22 /* QuickAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAction.swift; sourceTree = "<group>"; };
 		CB67A8770FD8023EF41E800B /* Channel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Channel.swift; sourceTree = "<group>"; };
 		D0FC411CFE8623617C0C9357 /* NewDepartmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewDepartmentView.swift; sourceTree = "<group>"; };
 		E71779A68EC260B230D01354 /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
@@ -80,6 +82,7 @@
 				CB67A8770FD8023EF41E800B /* Channel.swift */,
 				ADEC90CF5A0005DC5D558C64 /* ConnectionConfig.swift */,
 				09FF65D1765CB32FE3A2EC61 /* Message.swift */,
+				C0B206387215340DD5DABF22 /* QuickAction.swift */,
 				2085ED56EAC3960CF0EE9AEA /* ScheduledTask.swift */,
 			);
 			path = Models;
@@ -206,6 +209,7 @@
 				A5D99B925DCAEFC5ED8DF82A /* MessageBubble.swift in Sources */,
 				198AA5A62D4245F6BF9121CB /* MiniWhiteHouseApp.swift in Sources */,
 				691E0E89A01400F9E0CAB359 /* NewDepartmentView.swift in Sources */,
+				C31912E570372B7364D7F7C3 /* QuickAction.swift in Sources */,
 				047922F27C179A31095C5303 /* ScheduledTask.swift in Sources */,
 				4493FE414049D9F347E9126A /* SettingsView.swift in Sources */,
 				50012CA69A9249F7D7C50B41 /* TypingIndicator.swift in Sources */,

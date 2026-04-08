@@ -1,54 +1,208 @@
 import SwiftUI
+import MarkdownUI
 
-struct MessageBubble: View {
+struct MessageRow: View {
     let message: Message
 
     private var isUser: Bool { message.role == .user }
 
     var body: some View {
-        HStack {
-            if isUser { Spacer(minLength: 60) }
-
-            bubbleContent
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(bubbleBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .contextMenu {
-                    Button {
-                        UIPasteboard.general.string = message.text
-                    } label: {
-                        Label("Copy", systemImage: "doc.on.doc")
-                    }
-                }
-
-            if !isUser { Spacer(minLength: 60) }
+        HStack(alignment: .top, spacing: 10) {
+            avatar
+            VStack(alignment: .leading, spacing: 4) {
+                nameLabel
+                contentView
+                timestampLabel
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 4)
+        .contextMenu {
+            Button {
+                UIPasteboard.general.string = message.text
+            } label: {
+                Label("Copy", systemImage: "doc.on.doc")
+            }
         }
     }
 
+    // MARK: - Avatar
+
+    private var avatar: some View {
+        Group {
+            if isUser {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(hex: 0x7C3AED), Color(hex: 0x5B21B6)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 28, height: 28)
+                    .overlay(
+                        Text("U")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white)
+                    )
+            } else {
+                Circle()
+                    .fill(Color(hex: 0x1C1C1C))
+                    .frame(width: 28, height: 28)
+                    .overlay(
+                        Circle().stroke(Color(hex: 0x2A2A2A), lineWidth: 1)
+                    )
+                    .overlay(
+                        Text("🤖")
+                            .font(.system(size: 13))
+                    )
+            }
+        }
+    }
+
+    // MARK: - Name
+
+    private var nameLabel: some View {
+        Text(isUser ? "You" : "NanoClaw")
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(isUser ? Color(hex: 0xC4B5FD) : Color(hex: 0x888888))
+    }
+
+    // MARK: - Content
+
     @ViewBuilder
-    private var bubbleContent: some View {
+    private var contentView: some View {
         if isUser {
             Text(message.text)
-                .foregroundStyle(.white)
                 .font(.body)
+                .foregroundStyle(.white)
         } else {
-            SimpleMarkdown(text: message.text)
+            Markdown(message.text)
+                .markdownTheme(.nanoClaw)
         }
     }
 
-    @ViewBuilder
-    private var bubbleBackground: some View {
-        if isUser {
-            LinearGradient(
-                colors: [Color(hex: 0x7B2FBE), Color(hex: 0x5B1FA0)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        } else {
-            Color(hex: 0x2A2A2A)
-        }
+    // MARK: - Timestamp
+
+    private var timestampLabel: some View {
+        Text(message.timestamp, style: .time)
+            .font(.system(size: 10))
+            .foregroundStyle(Color(hex: 0x555555))
     }
+}
+
+// MARK: - MarkdownUI Theme
+
+extension MarkdownUI.Theme {
+    static let nanoClaw = Theme()
+        .text {
+            ForegroundColor(.init(hex: 0xD4D4D4))
+            FontSize(15)
+        }
+        .strong {
+            ForegroundColor(.white)
+        }
+        .link {
+            ForegroundColor(.init(hex: 0xA78BFA))
+        }
+        .code {
+            FontFamilyVariant(.monospaced)
+            FontSize(.em(0.88))
+            ForegroundColor(.init(hex: 0xC4B5FD))
+            BackgroundColor(.init(hex: 0x1A1A1A))
+        }
+        .heading1 { configuration in
+            configuration.label
+                .markdownMargin(top: 12, bottom: 4)
+                .markdownTextStyle {
+                    FontWeight(.bold)
+                    FontSize(20)
+                    ForegroundColor(.white)
+                }
+        }
+        .heading2 { configuration in
+            configuration.label
+                .markdownMargin(top: 10, bottom: 4)
+                .markdownTextStyle {
+                    FontWeight(.bold)
+                    FontSize(17)
+                    ForegroundColor(.white)
+                }
+        }
+        .heading3 { configuration in
+            configuration.label
+                .markdownMargin(top: 8, bottom: 4)
+                .markdownTextStyle {
+                    FontWeight(.semibold)
+                    FontSize(15)
+                    ForegroundColor(.white)
+                }
+        }
+        .codeBlock { configuration in
+            VStack(alignment: .leading, spacing: 0) {
+                if let language = configuration.language, !language.isEmpty {
+                    HStack {
+                        Text(language)
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundStyle(Color(hex: 0x888888))
+                        Spacer()
+                        Button {
+                            UIPasteboard.general.string = configuration.content
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color(hex: 0x666666))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+                    .padding(.bottom, 2)
+                }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    configuration.label
+                        .markdownTextStyle {
+                            FontFamilyVariant(.monospaced)
+                            FontSize(13)
+                            ForegroundColor(.init(hex: 0xE0E0E0))
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                }
+            }
+            .background(Color(hex: 0x141414))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color(hex: 0x222222), lineWidth: 1)
+            )
+        }
+        .listItem { configuration in
+            configuration.label
+                .markdownMargin(top: 2, bottom: 2)
+        }
+        .paragraph { configuration in
+            configuration.label
+                .markdownMargin(top: 0, bottom: 6)
+        }
+        .blockquote { configuration in
+            HStack(spacing: 0) {
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(Color(hex: 0x7C3AED).opacity(0.6))
+                    .frame(width: 3)
+                configuration.label
+                    .markdownTextStyle {
+                        ForegroundColor(.init(hex: 0x999999))
+                    }
+                    .padding(.leading, 12)
+            }
+            .padding(.vertical, 4)
+        }
+        .table { configuration in
+            configuration.label
+                .markdownTableBorderStyle(.init(color: .secondary.opacity(0.3)))
+                .markdownTableBackgroundStyle(.alternatingRows(Color(hex: 0x141414), Color(hex: 0x1A1A1A)))
+        }
 }
 
 // MARK: - Color hex helper
@@ -62,130 +216,5 @@ extension Color {
             blue: Double(hex & 0xFF) / 255,
             opacity: alpha
         )
-    }
-}
-
-// MARK: - Lightweight Markdown Renderer
-
-/// Parses and renders markdown without external dependencies.
-/// Handles: H1-H3, fenced code blocks, bullet lists, paragraphs,
-/// and inline bold/italic/code via iOS AttributedString.
-struct SimpleMarkdown: View {
-    let text: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                renderBlock(block)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    // MARK: Block model
-
-    private enum Block {
-        case h1(String), h2(String), h3(String)
-        case codeBlock(lang: String, code: String)
-        case bullet(String)
-        case paragraph(String)
-        case spacer
-    }
-
-    // MARK: Parser
-
-    private var blocks: [Block] {
-        var result: [Block] = []
-        let lines = text.components(separatedBy: "\n")
-        var i = 0
-
-        while i < lines.count {
-            let line = lines[i]
-            if line.hasPrefix("### ") {
-                result.append(.h3(String(line.dropFirst(4)))); i += 1
-            } else if line.hasPrefix("## ") {
-                result.append(.h2(String(line.dropFirst(3)))); i += 1
-            } else if line.hasPrefix("# ") {
-                result.append(.h1(String(line.dropFirst(2)))); i += 1
-            } else if line.hasPrefix("```") {
-                let lang = String(line.dropFirst(3)).trimmingCharacters(in: .whitespaces)
-                var code: [String] = []
-                i += 1
-                while i < lines.count && !lines[i].hasPrefix("```") { code.append(lines[i]); i += 1 }
-                if i < lines.count { i += 1 }
-                result.append(.codeBlock(lang: lang, code: code.joined(separator: "\n")))
-            } else if line.hasPrefix("- ") || line.hasPrefix("* ") {
-                result.append(.bullet(String(line.dropFirst(2)))); i += 1
-            } else if line.trimmingCharacters(in: .whitespaces).isEmpty {
-                let lastIsSpacer: Bool
-                if let last = result.last, case .spacer = last { lastIsSpacer = true } else { lastIsSpacer = false }
-                if !lastIsSpacer { result.append(.spacer) }
-                i += 1
-            } else {
-                result.append(.paragraph(line)); i += 1
-            }
-        }
-        while case .spacer? = result.first { result.removeFirst() }
-        while case .spacer? = result.last { result.removeLast() }
-        return result
-    }
-
-    // MARK: Rendering
-
-    @ViewBuilder
-    private func renderBlock(_ block: Block) -> some View {
-        switch block {
-        case .h1(let t):
-            inlineText(t).font(.title2.bold()).foregroundStyle(.white)
-                .padding(.top, 4).frame(maxWidth: .infinity, alignment: .leading)
-        case .h2(let t):
-            inlineText(t).font(.title3.bold()).foregroundStyle(.white)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        case .h3(let t):
-            inlineText(t).font(.headline).foregroundStyle(.white)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        case .codeBlock(let lang, let code):
-            codeBlockView(lang: lang, code: code)
-        case .bullet(let t):
-            HStack(alignment: .top, spacing: 8) {
-                Text("•").foregroundStyle(.white.opacity(0.7)).font(.body)
-                inlineText(t).font(.body).foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        case .paragraph(let t):
-            inlineText(t).font(.body).foregroundStyle(.white)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        case .spacer:
-            Color.clear.frame(height: 4)
-        }
-    }
-
-    private func inlineText(_ t: String) -> Text {
-        if let attr = try? AttributedString(
-            markdown: t,
-            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        ) { return Text(attr) }
-        return Text(t)
-    }
-
-    @ViewBuilder
-    private func codeBlockView(lang: String, code: String) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if !lang.isEmpty {
-                Text(lang)
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color(hex: 0x888888))
-                    .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, 2)
-            }
-            ScrollView(.horizontal, showsIndicators: false) {
-                Text(code)
-                    .font(.system(size: 13, design: .monospaced))
-                    .foregroundStyle(Color(hex: 0xE0E0E0))
-                    .padding(.horizontal, 12).padding(.vertical, 10)
-                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .background(Color(hex: 0x1A1A1A))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }

@@ -11,16 +11,17 @@ struct JobsView: View {
                 } else {
                     List(webSocket.tasks) { task in
                         TaskRow(task: task)
-                            .listRowBackground(Color(hex: 0x1C1C1E))
-                            .listRowSeparatorTint(Color.white.opacity(0.08))
+                            .listRowBackground(Color(hex: 0x151515))
+                            .listRowSeparatorTint(Color(hex: 0x1A1A1A))
                     }
                     .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                     .refreshable {
                         webSocket.requestTasks()
                     }
                 }
             }
-            .background(Color(hex: 0x111111))
+            .background(Color(hex: 0x0D0D0D))
             .navigationTitle("Executive Orders")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color(hex: 0x111111), for: .navigationBar)
@@ -42,13 +43,13 @@ struct JobsView: View {
         VStack(spacing: 16) {
             Image(systemName: "clock.badge.xmark")
                 .font(.system(size: 48))
-                .foregroundStyle(.gray.opacity(0.4))
+                .foregroundStyle(Color(hex: 0x333333))
             Text("No Executive Orders")
                 .font(.headline)
-                .foregroundStyle(.gray)
-            Text("Executive orders will appear here.")
+                .foregroundStyle(Color(hex: 0x666666))
+            Text("Scheduled tasks will appear here.")
                 .font(.caption)
-                .foregroundStyle(.gray.opacity(0.6))
+                .foregroundStyle(Color(hex: 0x444444))
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -74,25 +75,25 @@ private struct TaskRow: View {
             HStack(spacing: 12) {
                 Label(scheduleLabel, systemImage: scheduleIcon)
                     .font(.caption)
-                    .foregroundStyle(.gray)
+                    .foregroundStyle(Color(hex: 0x666666))
 
                 if let next = task.nextRun {
                     Label(relativeTime(next), systemImage: "arrow.clockwise")
                         .font(.caption)
-                        .foregroundStyle(.gray.opacity(0.8))
+                        .foregroundStyle(Color(hex: 0x555555))
                 }
             }
 
             if let last = task.lastRun {
                 Text("Last run \(relativeTime(last))")
                     .font(.caption2)
-                    .foregroundStyle(.gray.opacity(0.5))
+                    .foregroundStyle(Color(hex: 0x444444))
             }
 
             if let result = task.lastResult, !result.isEmpty {
                 Text(result)
                     .font(.caption2)
-                    .foregroundStyle(.gray.opacity(0.6))
+                    .foregroundStyle(Color(hex: 0x555555))
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
@@ -153,9 +154,9 @@ private struct StatusBadge: View {
 
     private var color: Color {
         switch status {
-        case .active: return .green
-        case .paused: return .yellow
-        case .completed: return .gray
+        case .active: return Color(hex: 0x6EE7B7)
+        case .paused: return Color(hex: 0xFBBF24)
+        case .completed: return Color(hex: 0x666666)
         }
     }
 }

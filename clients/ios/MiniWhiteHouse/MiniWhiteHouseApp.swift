@@ -20,25 +20,28 @@ struct MiniWhiteHouseApp: App {
                             ChatView(chatId: chatId)
                         }
                         .toolbar {
-                            ToolbarItem(placement: .topBarTrailing) {
+                            ToolbarItem(placement: .topBarLeading) {
                                 Button {
                                     showSettings = true
                                 } label: {
-                                    Image(systemName: "seal")
-                                        .foregroundStyle(.gray)
+                                    Image(systemName: "gearshape")
+                                        .font(.system(size: 15))
+                                        .foregroundStyle(Color(hex: 0x666666))
                                 }
                             }
                         }
+                        .toolbarBackground(Color(hex: 0x111111), for: .navigationBar)
+                        .toolbarBackground(.visible, for: .navigationBar)
                 }
                 .tabItem {
                     Label("Cabinet", systemImage: "building.columns")
                 }
                 JobsView()
                     .tabItem {
-                        Label("Executive Orders", systemImage: "doc.text")
+                        Label("Orders", systemImage: "doc.text")
                     }
             }
-            .tint(.purple)
+            .tint(Color(hex: 0xA78BFA))
             .sheet(isPresented: $showSettings) {
                 SettingsView()
                     .environmentObject(webSocketService)
@@ -46,6 +49,7 @@ struct MiniWhiteHouseApp: App {
             .environmentObject(webSocketService)
             .preferredColorScheme(.dark)
             .onAppear {
+                configureTabBarAppearance()
                 if KeychainService.loadToken() == nil {
                     showSettings = true
                 } else {
@@ -61,5 +65,17 @@ struct MiniWhiteHouseApp: App {
                 webSocketService.reconnect()
             }
         }
+    }
+
+    private func configureTabBarAppearance() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor(Color(hex: 0x111111))
+        appearance.stackedLayoutAppearance.normal.iconColor = UIColor(Color(hex: 0x555555))
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor(Color(hex: 0x555555))]
+        appearance.stackedLayoutAppearance.selected.iconColor = UIColor(Color(hex: 0xA78BFA))
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(Color(hex: 0xA78BFA))]
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
     }
 }

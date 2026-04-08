@@ -1,0 +1,207 @@
+<h2>如何区分 Agent 回复 vs Tool 执行结果？</h2>
+<p class="subtitle">选一个你最喜欢的视觉方向</p>
+
+<style>
+  .phone-wrapper {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 16px;
+  }
+  .phone {
+    width: 260px;
+    background: #111;
+    border-radius: 32px;
+    border: 2px solid #333;
+    padding: 16px 12px 20px;
+    min-height: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+  .phone:hover { border-color: #7B2FBE; box-shadow: 0 8px 40px rgba(123,47,190,0.3); }
+  .phone.selected { border-color: #7B2FBE !important; box-shadow: 0 0 0 3px rgba(123,47,190,0.4); }
+  .phone-label {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e1e2e;
+    color: #aaa;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 10px;
+    border-radius: 99px;
+    border: 1px solid #333;
+    white-space: nowrap;
+  }
+  .phone.selected .phone-label { background: #7B2FBE; color: #fff; border-color: #7B2FBE; }
+
+  /* user bubble */
+  .bubble-user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #7B2FBE, #5B1FA0);
+    color: #fff;
+    padding: 9px 13px;
+    border-radius: 16px 16px 4px 16px;
+    font-size: 13px;
+    max-width: 75%;
+    line-height: 1.4;
+  }
+  /* agent text bubble */
+  .bubble-agent {
+    align-self: flex-start;
+    background: #2A2A2A;
+    color: #fff;
+    padding: 9px 13px;
+    border-radius: 16px 16px 16px 4px;
+    font-size: 13px;
+    max-width: 85%;
+    line-height: 1.5;
+  }
+
+  /* === Option A: collapsed pill === */
+  .tool-pill {
+    align-self: flex-start;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 20px;
+    padding: 5px 11px;
+    font-size: 11px;
+    color: #888;
+    cursor: pointer;
+  }
+  .tool-pill .icon { font-size: 12px; }
+  .tool-pill .chevron { font-size: 9px; color: #555; margin-left: 2px; }
+
+  /* === Option B: dim left-sidebar bubble === */
+  .bubble-tool-b {
+    align-self: flex-start;
+    display: flex;
+    gap: 7px;
+    max-width: 90%;
+  }
+  .tool-sidebar {
+    width: 3px;
+    border-radius: 2px;
+    background: #444;
+    flex-shrink: 0;
+    margin: 3px 0;
+  }
+  .tool-content-b {
+    background: #1A1A1A;
+    color: #666;
+    padding: 7px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-family: 'SF Mono', monospace;
+    line-height: 1.5;
+    flex: 1;
+  }
+  .tool-content-b .tool-name-b {
+    color: #555;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 3px;
+  }
+
+  /* === Option C: inline section inside bubble === */
+  .bubble-agent-c {
+    align-self: flex-start;
+    background: #2A2A2A;
+    color: #fff;
+    border-radius: 16px 16px 16px 4px;
+    font-size: 13px;
+    max-width: 88%;
+    overflow: hidden;
+  }
+  .agent-text-c { padding: 9px 13px; line-height: 1.5; }
+  .tool-section-c {
+    background: #1A1A1A;
+    border-top: 1px solid #3a3a3a;
+    padding: 7px 12px;
+  }
+  .tool-header-c {
+    font-size: 10px;
+    color: #555;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .tool-body-c {
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    color: #666;
+    line-height: 1.4;
+  }
+</style>
+
+<div class="phone-wrapper">
+
+  <!-- Option A -->
+  <div class="option phone" data-choice="a" onclick="toggleSelect(this)">
+    <div class="phone-label">A · 折叠胶囊</div>
+    <div class="bubble-user">帮我看看今天的新闻</div>
+    <div class="tool-pill">
+      <span class="icon">⚙</span>
+      <span>WebSearch · 3 次调用</span>
+      <span class="chevron">▶</span>
+    </div>
+    <div class="bubble-agent">今天的重要新闻：<br>1. 科技股普涨…<br>2. 新能源政策更新…</div>
+  </div>
+
+  <!-- Option B -->
+  <div class="option phone" data-choice="b" onclick="toggleSelect(this)">
+    <div class="phone-label">B · 暗色侧栏气泡</div>
+    <div class="bubble-user">帮我看看今天的新闻</div>
+    <div class="bubble-tool-b">
+      <div class="tool-sidebar"></div>
+      <div class="tool-content-b">
+        <div class="tool-name-b">⚙ WebSearch</div>
+        "今日财经新闻"<br>
+        → 找到 5 条结果
+      </div>
+    </div>
+    <div class="bubble-tool-b">
+      <div class="tool-sidebar"></div>
+      <div class="tool-content-b">
+        <div class="tool-name-b">⚙ WebFetch</div>
+        reuters.com/markets<br>
+        → 1,240 tokens
+      </div>
+    </div>
+    <div class="bubble-agent">今天的重要新闻：<br>1. 科技股普涨…</div>
+  </div>
+
+  <!-- Option C -->
+  <div class="option phone" data-choice="c" onclick="toggleSelect(this)">
+    <div class="phone-label">C · 内嵌折叠区块</div>
+    <div class="bubble-user">帮我看看今天的新闻</div>
+    <div class="bubble-agent-c">
+      <div class="tool-section-c">
+        <div class="tool-header-c">⚙ WebSearch × 2 &nbsp;WebFetch × 1</div>
+        <div class="tool-body-c">"今日财经新闻" → 5 结果<br>reuters.com → 已读取</div>
+      </div>
+      <div class="agent-text-c">今天的重要新闻：<br>1. 科技股普涨…<br>2. 新能源政策更新…</div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="text-align:center;margin-top:24px;font-size:12px;">点击选择，也可以在终端描述你的想法</p>
