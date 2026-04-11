@@ -164,7 +164,7 @@ struct ChatView: View {
                                     )
                                     .clipShape(Capsule())
                             }
-                            .disabled(!webSocket.connectionState.isConnected || webSocket.isStreaming)
+                            .disabled(!webSocket.connectionState.isConnected)
                         }
                     }
                     .padding(.horizontal, 16)
@@ -278,9 +278,16 @@ struct ChatView: View {
     // MARK: - Helpers
 
     private var canSend: Bool {
+        // Deliberately do NOT gate on webSocket.isStreaming. The host handles
+        // mid-stream messages by piping them into the active agent query
+        // (IPC path), so blocking input while streaming is both unnecessary
+        // and a liability: any path that leaves isStreaming stuck at true
+        // (dropped done frame, silently dead TCP, agent hang) would freeze
+        // the button indefinitely. Streaming state drives the typing
+        // indicator only; the only real preconditions for sending are
+        // non-empty text and a live WebSocket.
         !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && webSocket.connectionState.isConnected
-            && !webSocket.isStreaming
     }
 
     private var indicatorColor: Color {
