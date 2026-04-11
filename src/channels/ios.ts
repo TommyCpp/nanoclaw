@@ -80,8 +80,6 @@ export class IosChannel implements Channel {
   private opts: IosChannelOpts;
   private wss: WebSocketServer | null = null;
   private clients = new Set<WebSocket>();
-  /** Messages buffered while no client is connected */
-  private pendingMessages = new Map<string, string[]>();
   private connected = false;
 
   constructor(opts: IosChannelOpts) {
@@ -129,34 +127,15 @@ export class IosChannel implements Channel {
             authenticated = true;
             this.clients.add(ws);
 
-            let totalPending = 0;
-            for (const buf of this.pendingMessages.values()) {
-              totalPending += buf.length;
-            }
-
-            ws.send(
-              JSON.stringify({
-                type: 'auth_ok',
-                pending: totalPending,
-              }),
-            );
+            // Message catch-up is now handled by the client via sync, not
+            // by in-memory buffering. The client issues one sync per chat
+            // after receiving auth_ok and ingests any missed outbound
+            // messages from the DB archive (outbound_messages table).
+            ws.send(JSON.stringify({ type: 'auth_ok' }));
             logger.info(
               { ip: (req.socket as any).remoteAddress },
               'iOS client connected',
             );
-            // Flush pending messages from all channels
-            if (totalPending > 0) {
-              logger.info(
-                { count: totalPending },
-                'iOS: flushing pending messages',
-              );
-              for (const buf of this.pendingMessages.values()) {
-                for (const pending of buf) {
-                  ws.send(pending);
-                }
-              }
-              this.pendingMessages.clear();
-            }
           } else {
             ws.send(JSON.stringify({ type: 'error', message: 'unauthorized' }));
             ws.close();
@@ -207,8 +186,7 @@ export class IosChannel implements Channel {
           const lastSeq = getLastOutboundSeq(jid);
           const messages =
             sinceSeq >= lastSeq ? [] : getOutboundSince(jid, sinceSeq);
-          const state: AgentState =
-            this.opts.getAgentState?.(jid) ?? 'idle';
+          const state: AgentState = this.opts.getAgentState?.(jid) ?? 'idle';
           ws.send(
             JSON.stringify({
               type: 'sync_response',
@@ -343,12 +321,11 @@ export class IosChannel implements Channel {
   async sendMessage(jid: string, text: string): Promise<void> {
     const chatId = jid.replace(/^ios:/, '');
 
-    // Archive first, then push. If the host crashes between the DB insert
-    // and the WebSocket write, the next client sync will still deliver
-    // this message. Likewise, if WebSocket delivery races with a client
-    // disconnect (the bug that motivated this whole change), the client's
-    // next sync will pick it up because lastSeq advanced but its local
-    // lastSeqByChatId didn't.
+    // Archive first, then push. The DB is the single source of truth for
+    // "what messages does this chat have"; WebSocket push is pure cache
+    // invalidation / live delivery. If push fails (disconnected client,
+    // stale socket, send/disconnect race, host crash mid-send) the DB
+    // record is already there and the client's next sync will pick it up.
     const { seq } = insertOutbound(jid, text);
 
     const token = JSON.stringify({ type: 'token', text, chatId, seq });
@@ -357,11 +334,12 @@ export class IosChannel implements Channel {
       (ws) => ws.readyState === WebSocket.OPEN,
     );
     if (connected.length === 0) {
-      // Still buffer for the legacy flush-on-reconnect path so v0 clients
-      // (without seq tracking) continue to receive messages. New clients
-      // will also pick it up via sync, so no duplicate risk — they dedupe
-      // by seq.
-      this.bufferPending(chatId, [token, done]);
+      // No live clients → nothing to push. The message is in the DB; when
+      // a client reconnects, its sync will deliver this.
+      logger.info(
+        { chatId, seq, length: text.length },
+        'iOS: no client connected, relying on sync for delivery',
+      );
       return;
     }
     for (const ws of connected) {
@@ -373,28 +351,19 @@ export class IosChannel implements Channel {
           ws.send(done, (err) => (err ? reject(err) : resolve()));
         });
       } catch (err) {
+        // Push failed mid-send. The DB still has the row, so the client
+        // will recover it on next sync. Just drop the stale socket.
         logger.warn(
           { chatId, seq, err },
-          'iOS: send failed, buffering and removing stale client',
+          'iOS: send failed, dropping stale client (sync will recover)',
         );
         this.clients.delete(ws);
-        this.bufferPending(chatId, [token, done]);
         return;
       }
     }
     logger.info(
       { clients: connected.length, chatId, seq, length: text.length },
       'iOS: message sent',
-    );
-  }
-
-  private bufferPending(chatId: string, messages: string[]): void {
-    const buf = this.pendingMessages.get(chatId) ?? [];
-    buf.push(...messages);
-    this.pendingMessages.set(chatId, buf);
-    logger.info(
-      { chatId, buffered: buf.length },
-      'iOS: no client connected, buffered message',
     );
   }
 
