@@ -23,6 +23,7 @@ import {
 } from './channels/registry.js';
 import {
   ContainerOutput,
+  getContainerActivity,
   runContainerAgent,
   writeGroupsSnapshot,
   writeTasksSnapshot,
@@ -71,7 +72,7 @@ import {
   shouldDropMessage,
 } from './sender-allowlist.js';
 import { startSchedulerLoop } from './task-scheduler.js';
-import { Channel, NewMessage, RegisteredGroup } from './types.js';
+import { AgentState, Channel, NewMessage, RegisteredGroup } from './types.js';
 import { logger } from './logger.js';
 
 // Re-export for backwards compatibility during refactor
@@ -179,6 +180,47 @@ export function _setRegisteredGroups(
   groups: Record<string, RegisteredGroup>,
 ): void {
   registeredGroups = groups;
+}
+
+/**
+ * Time (ms) without any stdout activity after which a live container is
+ * considered stalled. The SDK emits log lines roughly once per second during
+ * normal operation, so 10s is a generous threshold that still catches real
+ * hangs.
+ */
+const STALLED_THRESHOLD_MS = 10_000;
+
+/**
+ * Compute the current agent state for a chat, combining host-side queue
+ * state with container activity tracking. This is what the iOS sync API
+ * returns in its `state` field.
+ *
+ * - `idle`: nothing queued, container (if any) either never ran or is dead
+ * - `queued`: messages pending but container not yet spawned or not yet producing output
+ * - `running`: container alive and producing output recently
+ * - `stalled`: container alive but silent for longer than STALLED_THRESHOLD_MS
+ */
+export function getAgentState(chatJid: string): AgentState {
+  const activity = getContainerActivity(chatJid);
+  const snapshot = queue.getSnapshot(chatJid);
+
+  const hasPending =
+    snapshot?.pendingMessages === true ||
+    (snapshot?.pendingTasksCount ?? 0) > 0;
+  const queueActive = snapshot?.active === true;
+
+  if (activity?.alive) {
+    const silentFor = Date.now() - activity.lastOutputAt;
+    return silentFor > STALLED_THRESHOLD_MS ? 'stalled' : 'running';
+  }
+
+  if (queueActive || hasPending) {
+    // Container not alive (yet?) but work is queued — either spinning up
+    // or waiting for a free concurrency slot.
+    return 'queued';
+  }
+
+  return 'idle';
 }
 
 /**
@@ -724,6 +766,7 @@ async function main(): Promise<void> {
       delete sessions[folder];
       deleteSession(folder);
     },
+    getAgentState: (chatJid: string) => getAgentState(chatJid),
   };
 
   // Create and connect all registered channels.

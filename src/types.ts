@@ -77,6 +77,18 @@ export interface TaskRunLog {
   error: string | null;
 }
 
+// --- Outbound message archive (iOS resync) ---
+
+export interface OutboundMessage {
+  seq: number;
+  text: string;
+  created_at: number; // unix ms
+}
+
+// --- Agent state (exposed via iOS sync API) ---
+
+export type AgentState = 'idle' | 'queued' | 'running' | 'stalled';
+
 // --- Channel abstraction ---
 
 export interface Channel {

@@ -35,6 +35,35 @@ import { RegisteredGroup } from './types.js';
 const OUTPUT_START_MARKER = '---NANOCLAW_OUTPUT_START---';
 const OUTPUT_END_MARKER = '---NANOCLAW_OUTPUT_END---';
 
+/**
+ * Per-chatJid container activity tracking, used by the iOS sync API to
+ * answer "is this agent actually doing something right now?" without needing
+ * to instrument the container itself.
+ *
+ * - `startedAt`: when the container was spawned (ms since epoch)
+ * - `lastOutputAt`: when we last saw *any* streamed output (reset on each
+ *   stdout chunk; this is what tells running vs stalled apart)
+ * - `alive`: true while the child process is running
+ */
+export interface ContainerActivity {
+  startedAt: number;
+  lastOutputAt: number;
+  alive: boolean;
+}
+
+const containerActivity = new Map<string, ContainerActivity>();
+
+export function getContainerActivity(
+  chatJid: string,
+): ContainerActivity | undefined {
+  return containerActivity.get(chatJid);
+}
+
+/** Clear activity tracking (tests only). */
+export function _clearContainerActivity(): void {
+  containerActivity.clear();
+}
+
 export interface ContainerInput {
   prompt: string;
   sessionId?: string;
@@ -361,6 +390,15 @@ export async function runContainerAgent(
 
     onProcess(container, containerName);
 
+    // Register activity tracking for this chat. Initial lastOutputAt = startedAt
+    // so a container that hasn't produced output yet looks "queued/running",
+    // not "stalled".
+    containerActivity.set(input.chatJid, {
+      startedAt: startTime,
+      lastOutputAt: startTime,
+      alive: true,
+    });
+
     let stdout = '';
     let stderr = '';
     let stdoutTruncated = false;
@@ -376,6 +414,13 @@ export async function runContainerAgent(
 
     container.stdout.on('data', (data) => {
       const chunk = data.toString();
+
+      // Any stdout means the container is actively producing output — even
+      // MCP log spam counts. This is what distinguishes running from stalled.
+      const activity = containerActivity.get(input.chatJid);
+      if (activity) {
+        activity.lastOutputAt = Date.now();
+      }
 
       // Always accumulate for logging
       if (!stdoutTruncated) {
@@ -482,6 +527,14 @@ export async function runContainerAgent(
 
     container.on('close', (code) => {
       clearTimeout(timeout);
+      // Mark container no longer alive for the activity tracker. Leave the
+      // entry in the map so getContainerActivity() still returns the last
+      // known state (alive=false) rather than undefined — that lets callers
+      // distinguish "just died" from "never ran".
+      const activity = containerActivity.get(input.chatJid);
+      if (activity) {
+        activity.alive = false;
+      }
       const duration = Date.now() - startTime;
 
       if (timedOut) {
@@ -677,6 +730,10 @@ export async function runContainerAgent(
 
     container.on('error', (err) => {
       clearTimeout(timeout);
+      const activity = containerActivity.get(input.chatJid);
+      if (activity) {
+        activity.alive = false;
+      }
       logger.error(
         { group: group.name, containerName, error: err },
         'Container spawn error',

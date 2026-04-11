@@ -1,4 +1,5 @@
 import {
+  AgentState,
   Channel,
   OnInboundMessage,
   OnChatMetadata,
@@ -10,6 +11,9 @@ export interface ChannelOpts {
   onChatMetadata: OnChatMetadata;
   registeredGroups: () => Record<string, RegisteredGroup>;
   clearSession?: (folder: string) => void;
+  /** Current agent state for a chat — used by iOS sync. Optional so other
+   *  channels don't need to wire it. */
+  getAgentState?: (chatJid: string) => AgentState;
 }
 
 export type ChannelFactory = (opts: ChannelOpts) => Channel | null;

@@ -142,6 +142,28 @@ export class GroupQueue {
   }
 
   /**
+   * Snapshot of queue state for a group, used by the iOS sync API to compute
+   * agent state. Returns `undefined` if the group has no state (never queued).
+   */
+  getSnapshot(groupJid: string):
+    | {
+        active: boolean;
+        pendingMessages: boolean;
+        pendingTasksCount: number;
+        idleWaiting: boolean;
+      }
+    | undefined {
+    const state = this.groups.get(groupJid);
+    if (!state) return undefined;
+    return {
+      active: state.active,
+      pendingMessages: state.pendingMessages,
+      pendingTasksCount: state.pendingTasks.length,
+      idleWaiting: state.idleWaiting,
+    };
+  }
+
+  /**
    * Mark the container as idle-waiting (finished work, waiting for IPC input).
    * If tasks are pending, preempt the idle container immediately.
    */

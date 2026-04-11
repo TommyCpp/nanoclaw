@@ -7,10 +7,13 @@ import { isValidGroupFolder } from './group-folder.js';
 import { logger } from './logger.js';
 import {
   NewMessage,
+  OutboundMessage,
   RegisteredGroup,
   ScheduledTask,
   TaskRunLog,
 } from './types.js';
+
+const OUTBOUND_RETENTION_PER_CHAT = 500;
 
 let db: Database.Database;
 
@@ -82,6 +85,16 @@ function createSchema(database: Database.Database): void {
       container_config TEXT,
       requires_trigger INTEGER DEFAULT 1
     );
+
+    CREATE TABLE IF NOT EXISTS outbound_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      chat_jid TEXT NOT NULL,
+      seq INTEGER NOT NULL,
+      text TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      UNIQUE(chat_jid, seq)
+    );
+    CREATE INDEX IF NOT EXISTS idx_outbound_chat_seq ON outbound_messages(chat_jid, seq);
   `);
 
   // Add context_mode column if it doesn't exist (migration for existing DBs)
@@ -636,6 +649,78 @@ export function getAllRegisteredGroups(): Record<string, RegisteredGroup> {
     };
   }
   return result;
+}
+
+// --- Outbound message archive (iOS resync) ---
+
+/**
+ * Insert an outbound message, assigning a per-chat_jid monotonic seq.
+ * Prunes older rows so each chat keeps at most OUTBOUND_RETENTION_PER_CHAT.
+ * Both steps run inside a single transaction so concurrent writes cannot
+ * produce gaps or duplicates.
+ */
+export function insertOutbound(
+  chatJid: string,
+  text: string,
+): { seq: number } {
+  const txn = db.transaction((jid: string, body: string) => {
+    const row = db
+      .prepare(
+        `SELECT COALESCE(MAX(seq), 0) AS maxSeq FROM outbound_messages WHERE chat_jid = ?`,
+      )
+      .get(jid) as { maxSeq: number };
+    const seq = row.maxSeq + 1;
+    const createdAt = Date.now();
+    db.prepare(
+      `INSERT INTO outbound_messages (chat_jid, seq, text, created_at) VALUES (?, ?, ?, ?)`,
+    ).run(jid, seq, body, createdAt);
+
+    // Prune: keep the latest OUTBOUND_RETENTION_PER_CHAT rows for this chat.
+    db.prepare(
+      `DELETE FROM outbound_messages
+       WHERE chat_jid = ?
+         AND id NOT IN (
+           SELECT id FROM outbound_messages
+           WHERE chat_jid = ?
+           ORDER BY seq DESC
+           LIMIT ?
+         )`,
+    ).run(jid, jid, OUTBOUND_RETENTION_PER_CHAT);
+
+    return seq;
+  });
+
+  const seq = txn(chatJid, text);
+  return { seq };
+}
+
+/**
+ * Get outbound messages for a chat with seq > sinceSeq, ordered ascending.
+ * Returns empty array if no messages or sinceSeq >= last seq.
+ */
+export function getOutboundSince(
+  chatJid: string,
+  sinceSeq: number,
+): OutboundMessage[] {
+  return db
+    .prepare(
+      `SELECT seq, text, created_at FROM outbound_messages
+       WHERE chat_jid = ? AND seq > ?
+       ORDER BY seq ASC`,
+    )
+    .all(chatJid, sinceSeq) as OutboundMessage[];
+}
+
+/**
+ * Get the highest seq currently stored for a chat, or 0 if none.
+ */
+export function getLastOutboundSeq(chatJid: string): number {
+  const row = db
+    .prepare(
+      `SELECT COALESCE(MAX(seq), 0) AS maxSeq FROM outbound_messages WHERE chat_jid = ?`,
+    )
+    .get(chatJid) as { maxSeq: number };
+  return row.maxSeq;
 }
 
 // --- JSON migration ---

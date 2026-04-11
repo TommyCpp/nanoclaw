@@ -6,9 +6,12 @@ import {
   deleteTask,
   getAllChats,
   getAllRegisteredGroups,
+  getLastOutboundSeq,
   getMessagesSince,
   getNewMessages,
+  getOutboundSince,
   getTaskById,
+  insertOutbound,
   setRegisteredGroup,
   storeChatMetadata,
   storeMessage,
@@ -480,5 +483,140 @@ describe('registered group isMain', () => {
     const group = groups['group@g.us'];
     expect(group).toBeDefined();
     expect(group.isMain).toBeUndefined();
+  });
+});
+
+// --- Outbound message archive (iOS resync) ---
+
+describe('insertOutbound', () => {
+  it('assigns seq=1 to the first message on a chat', () => {
+    const { seq } = insertOutbound('ios:main', 'hello');
+    expect(seq).toBe(1);
+  });
+
+  it('assigns monotonically increasing seq per chat', () => {
+    const a = insertOutbound('ios:main', 'one');
+    const b = insertOutbound('ios:main', 'two');
+    const c = insertOutbound('ios:main', 'three');
+    expect(a.seq).toBe(1);
+    expect(b.seq).toBe(2);
+    expect(c.seq).toBe(3);
+  });
+
+  it('maintains independent seq counters per chat', () => {
+    const a = insertOutbound('ios:main', 'one');
+    const b = insertOutbound('ios:labor', 'one');
+    const c = insertOutbound('ios:main', 'two');
+    const d = insertOutbound('ios:labor', 'two');
+    expect(a.seq).toBe(1);
+    expect(b.seq).toBe(1);
+    expect(c.seq).toBe(2);
+    expect(d.seq).toBe(2);
+  });
+
+  it('prunes to the latest 500 messages per chat', () => {
+    // Insert 550 messages into chat A
+    for (let i = 0; i < 550; i++) {
+      insertOutbound('ios:main', `msg-${i}`);
+    }
+
+    // Only the latest 500 should remain
+    const all = getOutboundSince('ios:main', 0);
+    expect(all.length).toBe(500);
+    // First remaining should be seq=51 (550 - 500 + 1)
+    expect(all[0].seq).toBe(51);
+    expect(all[all.length - 1].seq).toBe(550);
+  });
+
+  it('does not prune messages from other chats during prune', () => {
+    for (let i = 0; i < 550; i++) {
+      insertOutbound('ios:main', `main-${i}`);
+    }
+    insertOutbound('ios:other', 'other-only');
+
+    const mainMsgs = getOutboundSince('ios:main', 0);
+    const otherMsgs = getOutboundSince('ios:other', 0);
+    expect(mainMsgs.length).toBe(500);
+    expect(otherMsgs.length).toBe(1);
+    expect(otherMsgs[0].text).toBe('other-only');
+  });
+});
+
+describe('getOutboundSince', () => {
+  it('returns messages with seq > sinceSeq, ordered ascending', () => {
+    insertOutbound('ios:main', 'a');
+    insertOutbound('ios:main', 'b');
+    insertOutbound('ios:main', 'c');
+
+    const result = getOutboundSince('ios:main', 1);
+    expect(result.map((m) => m.text)).toEqual(['b', 'c']);
+    expect(result.map((m) => m.seq)).toEqual([2, 3]);
+  });
+
+  it('returns empty array when sinceSeq equals lastSeq', () => {
+    insertOutbound('ios:main', 'a');
+    insertOutbound('ios:main', 'b');
+
+    const result = getOutboundSince('ios:main', 2);
+    expect(result).toEqual([]);
+  });
+
+  it('returns empty array when sinceSeq is greater than lastSeq (defensive)', () => {
+    insertOutbound('ios:main', 'a');
+
+    const result = getOutboundSince('ios:main', 99);
+    expect(result).toEqual([]);
+  });
+
+  it('returns all messages when sinceSeq is 0', () => {
+    insertOutbound('ios:main', 'a');
+    insertOutbound('ios:main', 'b');
+
+    const result = getOutboundSince('ios:main', 0);
+    expect(result.length).toBe(2);
+  });
+
+  it('returns empty array for unknown chat', () => {
+    expect(getOutboundSince('ios:nonexistent', 0)).toEqual([]);
+  });
+
+  it('scopes by chat_jid', () => {
+    insertOutbound('ios:main', 'main-a');
+    insertOutbound('ios:labor', 'labor-a');
+    insertOutbound('ios:main', 'main-b');
+
+    const result = getOutboundSince('ios:main', 0);
+    expect(result.map((m) => m.text)).toEqual(['main-a', 'main-b']);
+  });
+
+  it('includes created_at as a unix millisecond timestamp', () => {
+    const before = Date.now();
+    insertOutbound('ios:main', 'a');
+    const after = Date.now();
+
+    const [msg] = getOutboundSince('ios:main', 0);
+    expect(msg.created_at).toBeGreaterThanOrEqual(before);
+    expect(msg.created_at).toBeLessThanOrEqual(after);
+  });
+});
+
+describe('getLastOutboundSeq', () => {
+  it('returns 0 for a chat with no messages', () => {
+    expect(getLastOutboundSeq('ios:main')).toBe(0);
+  });
+
+  it('returns the highest seq for a chat', () => {
+    insertOutbound('ios:main', 'a');
+    insertOutbound('ios:main', 'b');
+    insertOutbound('ios:main', 'c');
+    expect(getLastOutboundSeq('ios:main')).toBe(3);
+  });
+
+  it('scopes by chat_jid', () => {
+    insertOutbound('ios:main', 'a');
+    insertOutbound('ios:main', 'b');
+    insertOutbound('ios:labor', 'x');
+    expect(getLastOutboundSeq('ios:main')).toBe(2);
+    expect(getLastOutboundSeq('ios:labor')).toBe(1);
   });
 });

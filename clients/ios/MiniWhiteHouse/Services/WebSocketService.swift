@@ -13,6 +13,23 @@ enum ConnectionState: Equatable {
     }
 }
 
+/// Agent activity reported by the host in sync_response.state.
+/// - idle: nothing queued, no container running
+/// - queued: messages queued but container not yet producing output
+/// - running: container alive and producing output
+/// - stalled: container alive but silent >10s (likely stuck)
+enum AgentState: String, Equatable {
+    case idle
+    case queued
+    case running
+    case stalled
+
+    /// True when the user should see a "working" indicator.
+    var isBusy: Bool {
+        self == .queued || self == .running || self == .stalled
+    }
+}
+
 @MainActor
 final class WebSocketService: ObservableObject {
     @Published var connectionState: ConnectionState = .disconnected
@@ -22,6 +39,9 @@ final class WebSocketService: ObservableObject {
     @Published var tasks: [ScheduledTask] = []
     @Published var isLoadingTasks = false
     @Published var unreadCounts: [String: Int] = [:]
+    /// Per-channel agent state as reported by the host via sync_response.
+    /// Defaults to .idle until the first sync comes back.
+    @Published var agentStates: [String: AgentState] = [:]
 
     /// Per-channel messages keyed by chatId
     @Published var channelMessages: [String: [Message]] = [:]
@@ -30,6 +50,11 @@ final class WebSocketService: ObservableObject {
     var messages: [Message] {
         get { channelMessages[currentChatId] ?? [] }
         set { channelMessages[currentChatId] = newValue }
+    }
+
+    /// Agent state for the current channel.
+    var currentAgentState: AgentState {
+        agentStates[currentChatId] ?? .idle
     }
 
     private var webSocketTask: URLSessionWebSocketTask?
@@ -42,9 +67,15 @@ final class WebSocketService: ObservableObject {
     private var reconnectAttempts = 0
     private let maxReconnectAttempts = 5
     private var connectionGeneration = 0
+    /// Highest server seq seen per chat, persisted to UserDefaults.
+    /// Used to drive sync requests — on reconnect we ask the host
+    /// "give me everything after <lastSeqByChatId[chatId]>".
+    private var lastSeqByChatId: [String: Int] = [:]
+    private static let lastSeqDefaultsKey = "ios_channel.lastSeqByChatId"
 
 
     init() {
+        loadLastSeq()
         loadMessages()
         loadChannels()
     }
@@ -294,6 +325,114 @@ final class WebSocketService: ObservableObject {
         try? data.write(to: Self.channelsFileURL, options: .atomic)
     }
 
+    private func loadLastSeq() {
+        if let dict = UserDefaults.standard.dictionary(forKey: Self.lastSeqDefaultsKey)
+            as? [String: Int]
+        {
+            lastSeqByChatId = dict
+        }
+    }
+
+    private func saveLastSeq() {
+        UserDefaults.standard.set(lastSeqByChatId, forKey: Self.lastSeqDefaultsKey)
+    }
+
+    // MARK: - Resync
+
+    /// Send a `sync` request for a given chat. Response handled in
+    /// handleTextMessage under "sync_response".
+    func requestSync(chatId: String) {
+        guard connectionState.isConnected else { return }
+        let sinceSeq = lastSeqByChatId[chatId] ?? 0
+        let payload: [String: Any] = [
+            "type": "sync",
+            "chatId": chatId,
+            "sinceSeq": sinceSeq,
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload),
+              let jsonString = String(data: data, encoding: .utf8) else { return }
+        webSocketTask?.send(.string(jsonString)) { _ in }
+    }
+
+    /// Sync every known channel. Called after auth_ok.
+    private func syncAllChannels() {
+        // Always sync "main" (the default chat) plus every channel we know about.
+        var seen: Set<String> = ["main"]
+        requestSync(chatId: "main")
+        for channel in channels where !seen.contains(channel.chatId) {
+            requestSync(chatId: channel.chatId)
+            seen.insert(channel.chatId)
+        }
+        // Also sync any chats we have seq records for but no channel metadata
+        // yet (edge case: UserDefaults has state the server hasn't told us about
+        // via list_channels yet).
+        for chatId in lastSeqByChatId.keys where !seen.contains(chatId) {
+            requestSync(chatId: chatId)
+            seen.insert(chatId)
+        }
+    }
+
+    /// Ingest a sync_response frame.
+    private func handleSyncResponse(_ json: [String: Any]) {
+        guard let chatId = json["chatId"] as? String else { return }
+        let lastSeq = json["lastSeq"] as? Int ?? 0
+        if let stateStr = json["state"] as? String,
+           let state = AgentState(rawValue: stateStr)
+        {
+            agentStates[chatId] = state
+            if chatId == currentChatId {
+                // isStreaming stays tied to the running/queued/stalled states.
+                isStreaming = state.isBusy
+            }
+        }
+
+        // If the server reports fewer messages than we have tracked locally,
+        // the DB was reset. Drop local seq to 0 and accept whatever the server
+        // returns as the new truth.
+        if lastSeq < (lastSeqByChatId[chatId] ?? 0) {
+            print("iOS: sync detected seq regression for \(chatId); resetting local lastSeq")
+            lastSeqByChatId[chatId] = 0
+        }
+
+        guard let messages = json["messages"] as? [[String: Any]] else {
+            saveLastSeq()
+            return
+        }
+
+        var msgs = channelMessages[chatId] ?? []
+        let existingSeqs = Set(msgs.compactMap { $0.serverSeq })
+        var appended = false
+
+        for entry in messages {
+            guard let seq = entry["seq"] as? Int,
+                  let text = entry["text"] as? String
+            else { continue }
+            if existingSeqs.contains(seq) { continue }
+            let createdAtMs = entry["createdAt"] as? Double
+            let timestamp =
+                createdAtMs.map { Date(timeIntervalSince1970: $0 / 1000.0) } ?? .now
+            msgs.append(
+                Message(role: .assistant, text: text, timestamp: timestamp, serverSeq: seq))
+            appended = true
+        }
+
+        if appended {
+            channelMessages[chatId] = msgs
+            saveMessages()
+            if chatId != currentChatId {
+                // Bump unread count by the number we just added for non-active chat
+                unreadCounts[chatId, default: 0] += messages.count
+            }
+        }
+
+        // Always advance the tracked seq — even when messages is empty, this
+        // is how a pure state-poll sync works.
+        if lastSeq > (lastSeqByChatId[chatId] ?? 0) {
+            lastSeqByChatId[chatId] = lastSeq
+            saveLastSeq()
+        }
+    }
+
     // MARK: - Private
 
     private func authenticate(token: String, generation: Int) {
@@ -361,11 +500,20 @@ final class WebSocketService: ObservableObject {
             if let pending = json["pending"] as? Int, pending > 0 {
                 isStreaming = true
             }
+            // Resync every known chat. This catches messages that were lost
+            // to WebSocket races or that the host generated while the app
+            // was in the background, and refreshes agent state display.
+            syncAllChannels()
 
         case "token":
             guard let tokenText = json["text"] as? String else { return }
             let chatId = json["chatId"] as? String ?? "main"
-            appendToken(tokenText, chatId: chatId)
+            let seq = json["seq"] as? Int
+            appendToken(tokenText, chatId: chatId, seq: seq)
+            if let seq, seq > (lastSeqByChatId[chatId] ?? 0) {
+                lastSeqByChatId[chatId] = seq
+                saveLastSeq()
+            }
 
         case "done":
             let chatId = json["chatId"] as? String ?? "main"
@@ -374,7 +522,16 @@ final class WebSocketService: ObservableObject {
             if chatId == currentChatId {
                 isStreaming = false
             }
+            if let seq = json["seq"] as? Int,
+               seq > (lastSeqByChatId[chatId] ?? 0)
+            {
+                lastSeqByChatId[chatId] = seq
+                saveLastSeq()
+            }
             saveMessages()
+
+        case "sync_response":
+            handleSyncResponse(json)
 
         case "typing":
             // Typing indicators are per-channel but we only show for current
@@ -437,14 +594,28 @@ final class WebSocketService: ObservableObject {
         }
     }
 
-    private func appendToken(_ token: String, chatId: String) {
+    private func appendToken(_ token: String, chatId: String, seq: Int? = nil) {
+        // Sync-delivered messages are deduped by serverSeq; make sure a token
+        // that arrives via the live stream also gets tagged so a later sync
+        // for the same chat won't produce a duplicate bubble.
         if let id = currentStreamingMessageID[chatId],
            var msgs = channelMessages[chatId],
            let index = msgs.firstIndex(where: { $0.id == id }) {
             msgs[index].text += token
+            if let seq, msgs[index].serverSeq == nil {
+                msgs[index].serverSeq = seq
+            }
             channelMessages[chatId] = msgs
         } else {
-            let newMessage = Message(role: .assistant, text: token)
+            // Guard: if we already have a message with this seq (delivered via
+            // sync a moment ago), don't create a duplicate bubble.
+            if let seq,
+               let existing = channelMessages[chatId],
+               existing.contains(where: { $0.serverSeq == seq })
+            {
+                return
+            }
+            let newMessage = Message(role: .assistant, text: token, serverSeq: seq)
             currentStreamingMessageID[chatId] = newMessage.id
             var msgs = channelMessages[chatId] ?? []
             msgs.append(newMessage)

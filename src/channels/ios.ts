@@ -6,12 +6,19 @@ import { randomUUID } from 'crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 
 import { ASSISTANT_NAME, TRIGGER_PATTERN } from '../config.js';
-import { setRegisteredGroup, getAllTasks } from '../db.js';
+import {
+  setRegisteredGroup,
+  getAllTasks,
+  insertOutbound,
+  getOutboundSince,
+  getLastOutboundSeq,
+} from '../db.js';
 import { readEnvFile } from '../env.js';
 import { isValidGroupFolder } from '../group-folder.js';
 import { logger } from '../logger.js';
 import { registerChannel, ChannelOpts } from './registry.js';
 import {
+  AgentState,
   Channel,
   OnChatMetadata,
   OnInboundMessage,
@@ -19,6 +26,34 @@ import {
 } from '../types.js';
 
 const DEFAULT_CHAT_ID = 'main';
+
+// Rate limit sync requests per connection. Protects the DB from a runaway
+// client while still allowing normal pull-to-refresh and foreground bursts.
+const SYNC_RATE_LIMIT_MAX = 10;
+const SYNC_RATE_LIMIT_WINDOW_MS = 1_000;
+
+interface SyncRateState {
+  windowStart: number;
+  count: number;
+}
+
+/** Per-WebSocket rate-limit bucket. Key attached to each ws as a hidden field. */
+const SYNC_RATE_KEY = Symbol('nanoclawSyncRate');
+
+function checkSyncRateLimit(ws: WebSocket): boolean {
+  const wsAny = ws as unknown as { [SYNC_RATE_KEY]?: SyncRateState };
+  const now = Date.now();
+  const state = wsAny[SYNC_RATE_KEY];
+  if (!state || now - state.windowStart > SYNC_RATE_LIMIT_WINDOW_MS) {
+    wsAny[SYNC_RATE_KEY] = { windowStart: now, count: 1 };
+    return true;
+  }
+  if (state.count >= SYNC_RATE_LIMIT_MAX) {
+    return false;
+  }
+  state.count += 1;
+  return true;
+}
 
 function iosJid(chatId: string): string {
   return `ios:${chatId}`;
@@ -32,6 +67,9 @@ interface IosChannelOpts {
   onMessage: OnInboundMessage;
   onChatMetadata: OnChatMetadata;
   registeredGroups: () => Record<string, RegisteredGroup>;
+  /** Optional agent state lookup; used to populate sync_response.state.
+   *  Defaults to 'idle' when not provided (e.g. in unit tests). */
+  getAgentState?: (chatJid: string) => AgentState;
   secret: string;
   port: number;
 }
@@ -135,6 +173,55 @@ export class IosChannel implements Channel {
         if (msg.type === 'list_tasks') {
           const tasks = getAllTasks();
           ws.send(JSON.stringify({ type: 'tasks', tasks }));
+          return;
+        }
+
+        // Pull-based resync: client asks "give me everything I missed for
+        // <chatId> since seq <sinceSeq>, plus the current agent state".
+        //
+        // Response shape:
+        //   { type: 'sync_response', chatId, lastSeq, state, messages: [...] }
+        //
+        // If sinceSeq >= lastSeq, messages will be []. That makes sync a
+        // generic state-poll with no side effects.
+        if (msg.type === 'sync') {
+          if (!checkSyncRateLimit(ws)) {
+            ws.send(
+              JSON.stringify({
+                type: 'error',
+                code: 'sync_rate_limit',
+                message: 'sync rate limit exceeded',
+              }),
+            );
+            return;
+          }
+          const chatId =
+            typeof msg.chatId === 'string' && msg.chatId.trim()
+              ? msg.chatId.trim()
+              : DEFAULT_CHAT_ID;
+          const sinceSeq =
+            typeof msg.sinceSeq === 'number' && Number.isFinite(msg.sinceSeq)
+              ? Math.max(0, Math.floor(msg.sinceSeq))
+              : 0;
+          const jid = iosJid(chatId);
+          const lastSeq = getLastOutboundSeq(jid);
+          const messages =
+            sinceSeq >= lastSeq ? [] : getOutboundSince(jid, sinceSeq);
+          const state: AgentState =
+            this.opts.getAgentState?.(jid) ?? 'idle';
+          ws.send(
+            JSON.stringify({
+              type: 'sync_response',
+              chatId,
+              lastSeq,
+              state,
+              messages: messages.map((m) => ({
+                seq: m.seq,
+                text: m.text,
+                createdAt: m.created_at,
+              })),
+            }),
+          );
           return;
         }
 
@@ -255,12 +342,25 @@ export class IosChannel implements Channel {
 
   async sendMessage(jid: string, text: string): Promise<void> {
     const chatId = jid.replace(/^ios:/, '');
-    const token = JSON.stringify({ type: 'token', text, chatId });
-    const done = JSON.stringify({ type: 'done', chatId });
+
+    // Archive first, then push. If the host crashes between the DB insert
+    // and the WebSocket write, the next client sync will still deliver
+    // this message. Likewise, if WebSocket delivery races with a client
+    // disconnect (the bug that motivated this whole change), the client's
+    // next sync will pick it up because lastSeq advanced but its local
+    // lastSeqByChatId didn't.
+    const { seq } = insertOutbound(jid, text);
+
+    const token = JSON.stringify({ type: 'token', text, chatId, seq });
+    const done = JSON.stringify({ type: 'done', chatId, seq });
     const connected = [...this.clients].filter(
       (ws) => ws.readyState === WebSocket.OPEN,
     );
     if (connected.length === 0) {
+      // Still buffer for the legacy flush-on-reconnect path so v0 clients
+      // (without seq tracking) continue to receive messages. New clients
+      // will also pick it up via sync, so no duplicate risk — they dedupe
+      // by seq.
       this.bufferPending(chatId, [token, done]);
       return;
     }
@@ -274,7 +374,7 @@ export class IosChannel implements Channel {
         });
       } catch (err) {
         logger.warn(
-          { chatId, err },
+          { chatId, seq, err },
           'iOS: send failed, buffering and removing stale client',
         );
         this.clients.delete(ws);
@@ -283,7 +383,7 @@ export class IosChannel implements Channel {
       }
     }
     logger.info(
-      { clients: connected.length, chatId, length: text.length },
+      { clients: connected.length, chatId, seq, length: text.length },
       'iOS: message sent',
     );
   }
@@ -368,6 +468,7 @@ registerChannel('ios', (opts: ChannelOpts) => {
     onMessage: opts.onMessage,
     onChatMetadata: opts.onChatMetadata,
     registeredGroups: opts.registeredGroups,
+    getAgentState: opts.getAgentState,
     secret,
     port,
   });
