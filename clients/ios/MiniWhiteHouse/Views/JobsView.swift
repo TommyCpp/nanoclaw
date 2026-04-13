@@ -2,6 +2,7 @@ import SwiftUI
 
 struct JobsView: View {
     @EnvironmentObject private var webSocket: WebSocketService
+    @State private var showDone = false
 
     var body: some View {
         NavigationStack {
@@ -9,10 +10,40 @@ struct JobsView: View {
                 if webSocket.tasks.isEmpty && !webSocket.isLoadingTasks {
                     emptyState
                 } else {
-                    List(webSocket.tasks) { task in
-                        TaskRow(task: task)
-                            .listRowBackground(Color(hex: 0x151515))
-                            .listRowSeparatorTint(Color(hex: 0x1A1A1A))
+                    let active = webSocket.tasks.filter { $0.status != .completed }
+                    let done = webSocket.tasks.filter { $0.status == .completed }
+
+                    List {
+                        if !active.isEmpty {
+                            Section {
+                                ForEach(active) { task in
+                                    TaskRow(task: task)
+                                        .listRowBackground(Color(hex: 0x151515))
+                                        .listRowSeparatorTint(Color(hex: 0x1A1A1A))
+                                }
+                            }
+                        }
+                        if !done.isEmpty {
+                            Section(isExpanded: $showDone) {
+                                ForEach(done) { task in
+                                    TaskRow(task: task)
+                                        .listRowBackground(Color(hex: 0x151515))
+                                        .listRowSeparatorTint(Color(hex: 0x1A1A1A))
+                                }
+                            } header: {
+                                Button {
+                                    withAnimation { showDone.toggle() }
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: showDone ? "chevron.down" : "chevron.right")
+                                            .font(.caption2.weight(.bold))
+                                        Text("Done (\(done.count))")
+                                            .font(.caption.weight(.medium))
+                                    }
+                                    .foregroundStyle(Color(hex: 0x555555))
+                                }
+                            }
+                        }
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
